@@ -1,0 +1,16 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Booking", "Booking\Booking.csproj", "{5507F360-5A00-4DFD-8DB4-D7B26CCFCCAE}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{5507F360-5A00-4DFD-8DB4-D7B26CCFCCAE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5507F360-5A00-4DFD-8DB4-D7B26CCFCCAE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5507F360-5A00-4DFD-8DB4-D7B26CCFCCAE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5507F360-5A00-4DFD-8DB4-D7B26CCFCCAE}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
