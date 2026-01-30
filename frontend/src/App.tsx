@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import axios from 'axios'
 import './index.css'
 import Register from './Register'
-import Login from './Login' 
+import Login from './Login'
 import AddHotel from './AddHotel'
 
 interface Hotel {
@@ -10,6 +10,7 @@ interface Hotel {
     name: string;
     city: string;
     pricePerNight: number;
+    description?: string;
 }
 
 interface User {
@@ -19,25 +20,37 @@ interface User {
 
 function App() {
     const [hotels, setHotels] = useState<Hotel[]>([])
-    // 'list' | 'register' | 'login' — управляем тем, что видит пользователь
     const [view, setView] = useState<'list' | 'register' | 'login' | 'add-hotel'>('list')
-    // Храним данные вошедшего пользователя
     const [user, setUser] = useState<User | null>(null)
 
-    useEffect(() => {
-        // Проверяем, не входил ли пользователь ранее (сохранено в браузере)
-        const savedUser = localStorage.getItem('user');
-        if (savedUser) {
-            setUser(JSON.parse(savedUser));
-        }
-
+    // Функция для загрузки списка отелей 
+    const fetchHotels = () => {
         axios.get('https://localhost:7200/api/hotels')
             .then(res => setHotels(res.data))
-            .catch(err => console.error(err))
+            .catch(err => console.error("Ошибка загрузки отелей:", err))
+    }
+
+    useEffect(() => {
+        // Проверяем авторизацию при загрузке
+        const savedUser = localStorage.getItem('user');
+        const token = localStorage.getItem('token');
+
+        if (savedUser && token) {
+            setUser(JSON.parse(savedUser));
+        } else {
+            // Если данных не хватает, чистим всё для безопасности
+            localStorage.removeItem('user');
+            localStorage.removeItem('token');
+            setUser(null);
+        }
+
+        // 2. Загружаем отели
+        fetchHotels();
     }, [])
 
     const handleLogout = () => {
         localStorage.removeItem('user');
+        localStorage.removeItem('token');
         setUser(null);
         setView('list');
     };
@@ -69,8 +82,8 @@ function App() {
                                 </span>
                                 {user.role === 'Owner' && (
                                     <button
-                                        onClick={() => setView('add-hotel')} // При нажатии открываем форму
-                                        className="bg-green-600 px-3 py-1 rounded text-sm font-bold hover:bg-green-700"
+                                        onClick={() => setView('add-hotel')}
+                                        className="bg-green-600 px-3 py-1 rounded text-sm font-bold hover:bg-green-700 transition-colors"
                                     >
                                         + Добавить отель
                                     </button>
@@ -83,27 +96,33 @@ function App() {
             </nav>
 
             <main className="container mx-auto py-8 px-4">
-                {/* Условный рендеринг в зависимости от view */}
                 {view === 'register' && <Register />}
 
                 {view === 'login' && (
                     <Login onLoginSuccess={(userData) => {
                         setUser(userData);
-                        setView('list'); // После входа возвращаемся к списку
+                        setView('list');
                     }} />
                 )}
 
                 {view === 'list' && (
                     <>
-                        <h2 className="text-2xl font-bold text-gray-800 mb-6 font-sans">Популярные направления в Казахстане</h2>
+                        <h2 className="text-2xl font-bold text-gray-800 mb-6">Популярные направления в Казахстане</h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {hotels.map(h => (
-                                <div key={h.id} className="bg-white rounded-lg overflow-hidden shadow-sm border p-4 hover:shadow-md transition-shadow">
-                                    <h3 className="text-lg font-bold text-blue-600">{h.name}</h3>
-                                    <p className="text-sm text-gray-500 underline">{h.city}</p>
-                                    <div className="mt-4 flex justify-between items-end">
+                                <div key={h.id} className="bg-white rounded-lg overflow-hidden shadow-sm border p-4 hover:shadow-md transition-shadow flex flex-col justify-between">
+                                    <div>
+                                        <h3 className="text-lg font-bold text-blue-600">{h.name}</h3>
+                                        <p className="text-xs text-gray-400 uppercase tracking-wider mb-2">{h.city}</p>
+                                        <p className="text-sm text-gray-600 italic line-clamp-3 mb-4">
+                                            {h.description && h.description.trim() !== ""
+                                                ? h.description
+                                                : "Описание отсутствует"}
+                                        </p>
+                                    </div>
+                                    <div className="flex justify-between items-end border-t pt-4">
                                         <p className="text-xl font-bold text-gray-900">{h.pricePerNight.toLocaleString()} ₸</p>
-                                        <button className="text-sm bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700">Смотреть</button>
+                                        <button className="text-sm bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Смотреть</button>
                                     </div>
                                 </div>
                             ))}
@@ -114,7 +133,10 @@ function App() {
                 {view === 'add-hotel' && user && (
                     <AddHotel
                         ownerEmail={user.email}
-                        onSuccess={() => setView('list')}
+                        onSuccess={() => {
+                            fetchHotels(); // Обновляем список сразу после добавления
+                            setView('list');
+                        }}
                     />
                 )}
             </main>

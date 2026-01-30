@@ -11,16 +11,25 @@ export default function Login({ onLoginSuccess }: LoginProps) {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setError(''); // Сбрасываем ошибку перед новой попыткой
+
         try {
-            // Отправляем запрос на новый метод Login
             const response = await axios.post('https://localhost:7200/api/auth/login', formData);
 
-            // Сохраняем в localStorage, чтобы после перезагрузки сайта не вылетать
-            localStorage.setItem('user', JSON.stringify(response.data));
+            // Сохраняем объект пользователя для App.tsx (email и роль)
+            localStorage.setItem('user', JSON.stringify({
+                email: response.data.email,
+                role: response.data.role
+            }));
 
-            // Передаем данные пользователя наверх в App.tsx
+            // Этот 'token' будет искать AddHotel.tsx
+            localStorage.setItem('token', response.data.token);
+
+            // Сообщаем главному компоненту, что вход выполнен успешно
             onLoginSuccess(response.data);
+
         } catch (err: any) {
+            console.error('Ошибка входа:', err);
             setError('Неверный логин или пароль');
         }
     };
@@ -30,23 +39,35 @@ export default function Login({ onLoginSuccess }: LoginProps) {
             <div className="bg-white p-8 rounded-lg shadow-lg border w-full max-w-md">
                 <h2 className="text-2xl font-bold mb-6 text-center">Вход на Booking.kz</h2>
                 <form onSubmit={handleSubmit} className="space-y-4">
-                    <input
-                        type="email"
-                        placeholder="Email"
-                        className="w-full border p-2 rounded"
-                        onChange={(e) => setFormData({...formData, email: e.target.value})}
-                    />
-                    <input
-                        type="password"
-                        placeholder="Пароль"
-                        className="w-full border p-2 rounded"
-                        onChange={(e) => setFormData({...formData, password: e.target.value})}
-                    />
-                    <button type="submit" className="w-full bg-[#003580] text-white py-2 rounded font-bold">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                        <input
+                            type="email"
+                            placeholder="example@mail.com"
+                            className="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none"
+                            onChange={(e) => setFormData({...formData, email: e.target.value})}
+                            required
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Пароль</label>
+                        <input
+                            type="password"
+                            placeholder="••••••••"
+                            className="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none"
+                            onChange={(e) => setFormData({...formData, password: e.target.value})}
+                            required
+                        />
+                    </div>
+                    <button type="submit" className="w-full bg-[#003580] text-white py-2 rounded font-bold hover:bg-[#002b66] transition-colors">
                         Войти
                     </button>
                 </form>
-                {error && <p className="text-red-500 mt-4 text-center">{error}</p>}
+                {error && (
+                    <div className="mt-4 p-2 bg-red-50 border border-red-200 text-red-600 text-sm text-center rounded">
+                        {error}
+                    </div>
+                )}
             </div>
         </div>
     );

@@ -1,5 +1,9 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.IdentityModel.Tokens;
 
 namespace Booking.Controllers;
 
@@ -22,37 +26,47 @@ public class AuthController : ControllerBase
 
         if (result.Succeeded)
         {
-            // Назначаем роль (User, Owner или Admin)
             await _userManager.AddToRoleAsync(user, model.Role);
             return Ok(new { message = "User registered successfully!" });
         }
-
         return BadRequest(result.Errors);
     }
-    
+
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginModel model)
     {
         var user = await _userManager.FindByEmailAsync(model.Email);
-        if (user == null || !await _userManager.CheckPasswordAsync(user, model.Password)) return Unauthorized();
+        if (user == null || !await _userManager.CheckPasswordAsync(user, model.Password)) 
+            return Unauthorized();
+
         var roles = await _userManager.GetRolesAsync(user);
-        // Пока возвращаем просто роль и почту, позже добавим полноценный токен
-        return Ok(new { 
-            email = user.Email, 
-            role = roles.FirstOrDefault() 
+
+        var authClaims = new List<Claim>
+        {
+            new Claim(ClaimTypes.NameIdentifier, user.Id),
+            new Claim(ClaimTypes.Email, user.Email!),
+            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+        };
+
+        foreach (var role in roles)
+            authClaims.Add(new Claim(ClaimTypes.Role, role));
+
+        var authSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("SuperSecretKey_DonnotShareIt_123456789_SafeVersion"));
+
+        var token = new JwtSecurityToken(
+            expires: DateTime.Now.AddDays(7),
+            claims: authClaims,
+            signingCredentials: new SigningCredentials(authSigningKey, SecurityAlgorithms.HmacSha256)
+        );
+
+        return Ok(new
+        {
+            token = new JwtSecurityTokenHandler().WriteToken(token),
+            email = user.Email,
+            role = roles.FirstOrDefault()
         });
     }
-    
 }
 
-public class LoginModel {
-    public string Email { get; set; }
-    public string Password { get; set; }
-}
-
-public class RegisterModel
-{
-    public string Email { get; set; }
-    public string Password { get; set; }
-    public string Role { get; set; } // "User" или "Owner"
-}
+public class LoginModel { public string Email { get; set; } = ""; public string Password { get; set; } = ""; }
+public class RegisterModel { public string Email { get; set; } = ""; public string Password { get; set; } = ""; public string Role { get; set; } = "User"; }

@@ -6,29 +6,45 @@ interface AddHotelProps {
     ownerEmail: string;
 }
 
-export default function AddHotel({onSuccess, ownerEmail}: AddHotelProps) {
+export default function AddHotel({ onSuccess, ownerEmail }: AddHotelProps) {
     const [formData, setFormData] = useState({
         name: "",
-        email: "",
+        city: "",
+        description: "", // Добавили описание
         pricePerNight: 0
     });
-    
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        // Достаем токен, который мы сохранили при логине
+        const token = localStorage.getItem('token');
+
         try {
+            // Отправляем запрос с заголовком Authorization
             await axios.post("https://localhost:7200/api/hotels", {
                 name: formData.name,
                 city: formData.city,
-                pricePerNight: formData.pricePerNight,
-                ownerId: ownerEmail
+                description: formData.description,
+                pricePerNight: formData.pricePerNight
+                
+            }, {
+                headers: {
+                    Authorization: `Bearer ${token}` // Передаем токен здесь
+                }
             });
+
             alert('Отель успешно добавлен!');
             onSuccess();
-        }catch(err) {
-            console.log('Ошибка при добавлении: ', err);
-            alert('Не удалось добавить отель')
+        } catch (err: any) {
+            console.error('Ошибка при добавлении: ', err);
+            const message = err.response?.status === 403
+                ? "У вас нет прав (нужна роль Owner)"
+                : "Не удалось добавить отель";
+            alert(message);
         }
     }
+
     return (
         <div className="max-w-md mx-auto bg-white p-6 rounded-lg shadow-md border">
             <h2 className="text-xl font-bold mb-4 text-gray-800">Добавить новый объект</h2>
@@ -38,6 +54,7 @@ export default function AddHotel({onSuccess, ownerEmail}: AddHotelProps) {
                     <input
                         type="text"
                         className="mt-1 block w-full border rounded p-2"
+                        value={formData.name}
                         onChange={(e) => setFormData({...formData, name: e.target.value})}
                         required
                     />
@@ -47,7 +64,17 @@ export default function AddHotel({onSuccess, ownerEmail}: AddHotelProps) {
                     <input
                         type="text"
                         className="mt-1 block w-full border rounded p-2"
+                        value={formData.city}
                         onChange={(e) => setFormData({...formData, city: e.target.value})}
+                        required
+                    />
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-gray-700">Описание</label>
+                    <textarea
+                        className="mt-1 block w-full border rounded p-2"
+                        value={formData.description}
+                        onChange={(e) => setFormData({...formData, description: e.target.value})}
                         required
                     />
                 </div>
@@ -56,6 +83,7 @@ export default function AddHotel({onSuccess, ownerEmail}: AddHotelProps) {
                     <input
                         type="number"
                         className="mt-1 block w-full border rounded p-2"
+                        value={formData.pricePerNight}
                         onChange={(e) => setFormData({...formData, pricePerNight: Number(e.target.value)})}
                         required
                     />

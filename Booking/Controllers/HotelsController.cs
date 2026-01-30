@@ -1,7 +1,8 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Booking.Data;
-using Booking.Models;
+﻿using Booking.DTOs;
+using Booking.Services;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace Booking.Controllers;
 
@@ -9,26 +10,24 @@ namespace Booking.Controllers;
 [Route("api/[controller]")]
 public class HotelsController : ControllerBase
 {
-    private readonly BookingDbContext _context;
+    private readonly IHotelService _hotelService;
 
-    public HotelsController(BookingDbContext context)
+    public HotelsController(IHotelService hotelService)
     {
-        _context = context;
+        _hotelService = hotelService;
     }
 
-    // GET: api/hotels
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Hotel>>> GetHotels()
-    {
-        return await _context.Hotels.ToListAsync();
-    }
+    public async Task<IActionResult> GetHotels() => Ok(await _hotelService.GetAllAsync());
 
-    // POST: api/hotels
     [HttpPost]
-    public async Task<ActionResult<Hotel>> CreateHotel(Hotel hotel)
+    [Authorize(Roles = "Owner")]
+    public async Task<IActionResult> CreateHotel([FromBody] HotelDto hotelDto)
     {
-        _context.Hotels.Add(hotel);
-        await _context.SaveChangesAsync();
-        return Ok(hotel);
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+        var result = await _hotelService.CreateAsync(hotelDto, userId);
+        return Ok(result);
     }
 }
