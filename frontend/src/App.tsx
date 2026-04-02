@@ -5,6 +5,8 @@ import Register from './Register'
 import Login from './Login'
 import AddHotel from './AddHotel'
 
+axios.defaults.withCredentials = true;
+
 interface Hotel {
     id: number;
     name: string;
@@ -23,47 +25,43 @@ function App() {
     const [view, setView] = useState<'list' | 'register' | 'login' | 'add-hotel'>('list')
     const [user, setUser] = useState<User | null>(null)
 
-    // Функция для загрузки списка отелей 
     const fetchHotels = () => {
-        axios.get('https://localhost:7200/api/hotels')
+        axios.get('/api/hotels')
             .then(res => setHotels(res.data))
             .catch(err => console.error("Ошибка загрузки отелей:", err))
     }
 
     useEffect(() => {
-        // Проверяем авторизацию при загрузке
-        const savedUser = localStorage.getItem('user');
-        const token = localStorage.getItem('token');
+        // Проверяем авторизацию через сервер
+        axios.get('/api/auth/me')
+            .then(res => {
+                const userData = { email: res.data.email, role: res.data.role };
+                setUser(userData);
+                localStorage.setItem('user', JSON.stringify(userData));
+            })
+            .catch(() => {
+                // Кука невалидна или отсутствует — чистим всё
+                localStorage.removeItem('user');
+                setUser(null);
+            });
 
-        if (savedUser && token) {
-            setUser(JSON.parse(savedUser));
-        } else {
-            // Если данных не хватает, чистим всё для безопасности
-            localStorage.removeItem('user');
-            localStorage.removeItem('token');
-            setUser(null);
-        }
-
-        // 2. Загружаем отели
         fetchHotels();
     }, [])
 
-    const handleLogout = () => {
+    const handleLogout = async () => {
+        await axios.post('/api/auth/logout');
         localStorage.removeItem('user');
-        localStorage.removeItem('token');
         setUser(null);
         setView('list');
     };
 
     return (
         <div className="min-h-screen bg-gray-50">
-            {/* Header */}
             <nav className="bg-[#003580] p-4 text-white shadow-md">
                 <div className="container mx-auto flex justify-between items-center">
                     <h1 className="text-2xl font-bold cursor-pointer" onClick={() => setView('list')}>
                         Booking.kz
                     </h1>
-
                     <div className="space-x-4 flex items-center">
                         {!user ? (
                             <>
@@ -134,7 +132,7 @@ function App() {
                     <AddHotel
                         ownerEmail={user.email}
                         onSuccess={() => {
-                            fetchHotels(); // Обновляем список сразу после добавления
+                            fetchHotels();
                             setView('list');
                         }}
                     />

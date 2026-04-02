@@ -11,21 +11,16 @@ export default function Login({ onLoginSuccess }: LoginProps) {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setError(''); // Сбрасываем ошибку перед новой попыткой
+        setError('');
 
         try {
-            const response = await axios.post('https://localhost:7200/api/auth/login', formData);
+            const response = await axios.post('/api/auth/login', formData);
 
-            // Сохраняем объект пользователя для App.tsx (email и роль)
             localStorage.setItem('user', JSON.stringify({
                 email: response.data.email,
                 role: response.data.role
             }));
 
-            // Этот 'token' будет искать AddHotel.tsx
-            localStorage.setItem('token', response.data.token);
-
-            // Сообщаем главному компоненту, что вход выполнен успешно
             onLoginSuccess(response.data);
 
         } catch (err: any) {

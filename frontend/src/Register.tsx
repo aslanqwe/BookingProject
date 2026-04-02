@@ -13,7 +13,7 @@ export default function Register() {
         e.preventDefault();
         try {
             // Отправляем данные на твой бэкенд
-            await axios.post('https://localhost:7200/api/auth/register', formData);
+            await axios.post('/api/auth/register', formData);
             setMessage('Регистрация успешна! Теперь вы можете войти.');
         } catch (error: any) {
             setMessage('Ошибка: ' + (error.response?.data?.[0]?.description || 'Что-то пошло не так'));

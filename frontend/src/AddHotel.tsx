@@ -10,28 +10,19 @@ export default function AddHotel({ onSuccess, ownerEmail }: AddHotelProps) {
     const [formData, setFormData] = useState({
         name: "",
         city: "",
-        description: "", // Добавили описание
+        description: "",
         pricePerNight: 0
     });
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
-        // Достаем токен, который мы сохранили при логине
-        const token = localStorage.getItem('token');
-
         try {
-            // Отправляем запрос с заголовком Authorization
-            await axios.post("https://localhost:7200/api/hotels", {
+            await axios.post("/api/hotels", {
                 name: formData.name,
                 city: formData.city,
                 description: formData.description,
                 pricePerNight: formData.pricePerNight
-                
-            }, {
-                headers: {
-                    Authorization: `Bearer ${token}` // Передаем токен здесь
-                }
             });
 
             alert('Отель успешно добавлен!');

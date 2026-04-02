@@ -50,6 +50,16 @@ builder.Services.AddAuthentication(options => {
         ValidateIssuer = false,
         ValidateAudience = false
     };
+    
+    // Читаем токен из куки, а не из заголовка Authorization
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+        {
+            context.Token = context.Request.Cookies["jwt"];
+            return Task.CompletedTask;
+        }
+    };
 });
 
 builder.Services.AddCors(options =>

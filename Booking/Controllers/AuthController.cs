@@ -59,13 +59,34 @@ public class AuthController : ControllerBase
             signingCredentials: new SigningCredentials(authSigningKey, SecurityAlgorithms.HmacSha256)
         );
 
+        var tokenString = new JwtSecurityTokenHandler().WriteToken(token);
+
+        // Устанавливаем токен в httpOnly cookie
+        Response.Cookies.Append("jwt", tokenString, new CookieOptions
+        {
+            HttpOnly = true,       // JS не может читать этот cookie
+            Secure = true,         // Только по HTTPS
+            SameSite = SameSiteMode.Strict,
+            Expires = DateTime.UtcNow.AddDays(7)
+        });
+        
+        return Ok(new { email = user.Email, role = roles.FirstOrDefault() });
+    }
+    
+    [HttpPost("me")]
+    public async Task<IActionResult> Me()
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var user = await _userManager.FindByIdAsync(userId!);
+        var roles = await _userManager.GetRolesAsync(user!);
+    
         return Ok(new
         {
-            token = new JwtSecurityTokenHandler().WriteToken(token),
-            email = user.Email,
+            email = user!.Email,
             role = roles.FirstOrDefault()
         });
-    }
+    } 
+    
 }
 
 public class LoginModel { public string Email { get; set; } = ""; public string Password { get; set; } = ""; }
