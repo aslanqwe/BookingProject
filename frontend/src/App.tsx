@@ -4,6 +4,7 @@ import './index.css'
 import Register from './Register'
 import Login from './Login'
 import AddHotel from './AddHotel'
+import HotelModal from './HotelModal';
 
 axios.defaults.withCredentials = true;
 
@@ -24,7 +25,9 @@ function App() {
     const [hotels, setHotels] = useState<Hotel[]>([])
     const [view, setView] = useState<'list' | 'register' | 'login' | 'add-hotel'>('list')
     const [user, setUser] = useState<User | null>(null)
-
+    const [selectedHotel, setSelectedHotel] = useState<Hotel | null>(null); // Уточнил тип для Hotel
+    const [loading, setLoading] = useState(true);
+    
     const fetchHotels = () => {
         axios.get('/api/hotels')
             .then(res => setHotels(res.data))
@@ -32,19 +35,19 @@ function App() {
     }
 
     useEffect(() => {
-        // Проверяем авторизацию через сервер
         axios.get('/api/auth/me')
             .then(res => {
+                console.log('me ответил:', res.data);
                 const userData = { email: res.data.email, role: res.data.role };
                 setUser(userData);
                 localStorage.setItem('user', JSON.stringify(userData));
             })
-            .catch(() => {
-                // Кука невалидна или отсутствует — чистим всё
+            .catch((err) => {
+                console.log('me ошибка:', err.response?.status, err.response?.data);
                 localStorage.removeItem('user');
                 setUser(null);
-            });
-
+            }) 
+            .finally(() => setLoading(false));
         fetchHotels();
     }, [])
 
@@ -54,7 +57,13 @@ function App() {
         setUser(null);
         setView('list');
     };
-
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <p className="text-gray-500 text-lg">Загрузка...</p>
+            </div>
+        );
+    }
     return (
         <div className="min-h-screen bg-gray-50">
             <nav className="bg-[#003580] p-4 text-white shadow-md">
@@ -99,6 +108,7 @@ function App() {
                 {view === 'login' && (
                     <Login onLoginSuccess={(userData) => {
                         setUser(userData);
+                        fetchHotels();
                         setView('list');
                     }} />
                 )}
@@ -120,7 +130,13 @@ function App() {
                                     </div>
                                     <div className="flex justify-between items-end border-t pt-4">
                                         <p className="text-xl font-bold text-gray-900">{h.pricePerNight.toLocaleString()} ₸</p>
-                                        <button className="text-sm bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Смотреть</button>
+                                        {/* ДобавилsetSelectedHotel(h) сюда */}
+                                        <button
+                                            onClick={() => setSelectedHotel(h)}
+                                            className="text-sm bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+                                        >
+                                            Смотреть
+                                        </button>
                                     </div>
                                 </div>
                             ))}
@@ -138,8 +154,14 @@ function App() {
                     />
                 )}
             </main>
+
+            {/* Всплывающее окно отеля */}
+            <HotelModal
+                hotel={selectedHotel}
+                onClose={() => setSelectedHotel(null)}
+            />
         </div>
     )
 }
 
-export default App
+export default App;

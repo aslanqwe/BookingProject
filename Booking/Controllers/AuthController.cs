@@ -1,6 +1,7 @@
 ﻿using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
@@ -73,7 +74,15 @@ public class AuthController : ControllerBase
         return Ok(new { email = user.Email, role = roles.FirstOrDefault() });
     }
     
-    [HttpPost("me")]
+    [HttpPost("logout")]
+    public IActionResult Logout()
+    {
+        Response.Cookies.Delete("jwt");
+        return Ok();
+    }
+    
+    [HttpGet("me")]
+    [Authorize]
     public async Task<IActionResult> Me()
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -85,7 +94,7 @@ public class AuthController : ControllerBase
             email = user!.Email,
             role = roles.FirstOrDefault()
         });
-    } 
+    }
     
 }
 
