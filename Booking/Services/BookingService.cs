@@ -1,0 +1,72 @@
+using Booking.Data;
+using Booking.DTOs;
+using Booking.Models;
+using Microsoft.EntityFrameworkCore;
+
+namespace Booking.Services;
+
+public class BookingService : IBookingService
+{
+    private readonly BookingDbContext _context;
+
+    public BookingService(BookingDbContext context)
+    {
+        _context = context;
+    }
+
+    public async Task<BookingDto> CreateAsync(CreateBookingDto dto, string userId)
+    {
+        var hotel = await _context.Hotels.FindAsync(dto.HotelId);
+        if (hotel == null) throw new Exception("Отель не найден");
+
+        var nights = (dto.CheckOut - dto.CheckIn).Days;
+        if (nights <= 0) throw new Exception("Дата выезда должна быть позже даты заезда");
+
+        var booking = new Models.Booking
+        {
+            HotelId = dto.HotelId,
+            UserId = userId,
+            CheckIn = dto.CheckIn,
+            CheckOut = dto.CheckOut,
+            Guests = dto.Guests,
+            TotalPrice = hotel.PricePerNight * nights
+        };
+
+        _context.Bookings.Add(booking);
+        await _context.SaveChangesAsync();
+
+        return new BookingDto
+        {
+            Id = booking.Id,
+            HotelId = hotel.Id,
+            HotelName = hotel.Name,
+            City = hotel.City,
+            CheckIn = booking.CheckIn,
+            CheckOut = booking.CheckOut,
+            Guests = booking.Guests,
+            TotalPrice = booking.TotalPrice,
+            CreatedAt = booking.CreatedAt
+        };
+    }
+
+    public async Task<IEnumerable<BookingDto>> GetMyBookingsAsync(string userId)
+    {
+        return await _context.Bookings
+            .Include(b => b.Hotel)
+            .Where(b => b.UserId == userId)
+            .OrderByDescending(b => b.CreatedAt)
+            .Select(b => new BookingDto
+            {
+                Id = b.Id,
+                HotelId = b.Hotel.Id,
+                HotelName = b.Hotel.Name,
+                City = b.Hotel.City,
+                CheckIn = b.CheckIn,
+                CheckOut = b.CheckOut,
+                Guests = b.Guests,
+                TotalPrice = b.TotalPrice,
+                CreatedAt = b.CreatedAt
+            })
+            .ToListAsync();
+    }
+}

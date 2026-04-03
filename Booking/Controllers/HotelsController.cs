@@ -18,7 +18,13 @@ public class HotelsController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetHotels() => Ok(await _hotelService.GetAllAsync());
+    public async Task<IActionResult> GetHotels(
+        [FromQuery] string? city,
+        [FromQuery] decimal? maxPrice)
+    {
+        var result = await _hotelService.GetAllAsync(city, maxPrice);
+        return Ok(result);
+    }
 
     [HttpPost]
     [Authorize(Roles = "Owner")]

@@ -12,6 +12,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // 1. Сервисы
 builder.Services.AddScoped<IHotelService, HotelService>();
+builder.Services.AddScoped<IBookingService, BookingService>();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 

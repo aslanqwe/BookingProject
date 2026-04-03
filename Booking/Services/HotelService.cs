@@ -14,9 +14,17 @@ public class HotelService : IHotelService
         _context = context;
     }
 
-    public async Task<IEnumerable<HotelDto>> GetAllAsync()
+    public async Task<IEnumerable<HotelDto>> GetAllAsync(string? city, decimal? maxPrice)
     {
-        return await _context.Hotels
+        var query = _context.Hotels.AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(city))
+            query = query.Where(h => h.City.ToLower().Contains(city.ToLower()));
+
+        if (maxPrice.HasValue)
+            query = query.Where(h => h.PricePerNight <= maxPrice.Value);
+
+        return await query
             .Select(h => new HotelDto {
                 Id = h.Id,
                 Name = h.Name,
