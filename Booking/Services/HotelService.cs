@@ -14,7 +14,7 @@ public class HotelService : IHotelService
         _context = context;
     }
 
-    public async Task<IEnumerable<HotelDto>> GetAllAsync(string? city, decimal? maxPrice)
+    public async Task<IEnumerable<HotelDto>> GetAllAsync(string? city, decimal? maxPrice, int? stars)
     {
         var query = _context.Hotels.AsQueryable();
 
@@ -24,13 +24,18 @@ public class HotelService : IHotelService
         if (maxPrice.HasValue)
             query = query.Where(h => h.PricePerNight <= maxPrice.Value);
 
+        if (stars.HasValue)
+            query = query.Where(h => h.Stars == stars.Value);
+
         return await query
             .Select(h => new HotelDto {
                 Id = h.Id,
                 Name = h.Name,
                 City = h.City,
                 Description = h.Description,
-                PricePerNight = h.PricePerNight
+                PricePerNight = h.PricePerNight,
+                Stars = h.Stars,
+                TotalRooms = h.TotalRooms
             }).ToListAsync();
     }
 
@@ -41,7 +46,9 @@ public class HotelService : IHotelService
             City = dto.City,
             Description = dto.Description,
             PricePerNight = dto.PricePerNight,
-            OwnerId = ownerId
+            OwnerId = ownerId,
+            Stars = dto.Stars,
+            TotalRooms = dto.TotalRooms
         };
 
         _context.Hotels.Add(hotel);

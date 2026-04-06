@@ -45,6 +45,10 @@ namespace Booking.Migrations
                     b.Property<int>("HotelId")
                         .HasColumnType("integer");
 
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
                     b.Property<decimal>("TotalPrice")
                         .HasColumnType("numeric");
 
@@ -84,6 +88,12 @@ namespace Booking.Migrations
 
                     b.Property<decimal>("PricePerNight")
                         .HasColumnType("numeric");
+
+                    b.Property<int>("Stars")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TotalRooms")
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 

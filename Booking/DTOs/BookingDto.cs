@@ -10,6 +10,7 @@ public class BookingDto
     public DateTime CheckOut { get; set; }
     public int Guests { get; set; }
     public decimal TotalPrice { get; set; }
+    public string Status { get; set; } = "Active";
     public DateTime CreatedAt { get; set; }
 }
 

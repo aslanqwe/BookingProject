@@ -44,4 +44,21 @@ public class BookingsController : ControllerBase
         var result = await _bookingService.GetMyBookingsAsync(userId);
         return Ok(result);
     }
+
+    [HttpPost("{id}/cancel")]
+    public async Task<IActionResult> Cancel(int id)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+        try
+        {
+            await _bookingService.CancelAsync(id, userId);
+            return Ok(new { message = "Бронь отменена" });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
 }

@@ -22,6 +22,17 @@ public class BookingService : IBookingService
         var nights = (dto.CheckOut - dto.CheckIn).Days;
         if (nights <= 0) throw new Exception("Дата выезда должна быть позже даты заезда");
 
+        // Считаем сколько активных броней пересекается с запрошенными датами
+        var bookedRooms = await _context.Bookings.CountAsync(b =>
+            b.HotelId == dto.HotelId &&
+            b.Status == "Active" &&
+            b.CheckIn < dto.CheckOut &&
+            b.CheckOut > dto.CheckIn
+        );
+
+        if (bookedRooms >= hotel.TotalRooms)
+            throw new Exception($"Свободных номеров нет. Все {hotel.TotalRooms} номеров заняты на эти даты");
+
         var booking = new Models.Booking
         {
             HotelId = dto.HotelId,
@@ -29,7 +40,8 @@ public class BookingService : IBookingService
             CheckIn = dto.CheckIn,
             CheckOut = dto.CheckOut,
             Guests = dto.Guests,
-            TotalPrice = hotel.PricePerNight * nights
+            TotalPrice = hotel.PricePerNight * nights,
+            Status = "Active"
         };
 
         _context.Bookings.Add(booking);
@@ -45,6 +57,7 @@ public class BookingService : IBookingService
             CheckOut = booking.CheckOut,
             Guests = booking.Guests,
             TotalPrice = booking.TotalPrice,
+            Status = booking.Status,
             CreatedAt = booking.CreatedAt
         };
     }
@@ -65,8 +78,20 @@ public class BookingService : IBookingService
                 CheckOut = b.CheckOut,
                 Guests = b.Guests,
                 TotalPrice = b.TotalPrice,
+                Status = b.Status,
                 CreatedAt = b.CreatedAt
             })
             .ToListAsync();
+    }
+
+    public async Task CancelAsync(int bookingId, string userId)
+    {
+        var booking = await _context.Bookings.FindAsync(bookingId);
+        if (booking == null) throw new Exception("Бронь не найдена");
+        if (booking.UserId != userId) throw new Exception("Нет доступа");
+        if (booking.Status == "Cancelled") throw new Exception("Бронь уже отменена");
+
+        booking.Status = "Cancelled";
+        await _context.SaveChangesAsync();
     }
 }

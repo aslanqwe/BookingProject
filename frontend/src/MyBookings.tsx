@@ -9,6 +9,7 @@ interface Booking {
     checkOut: string;
     guests: number;
     totalPrice: number;
+    status: string;
     createdAt: string;
 }
 
@@ -16,12 +17,26 @@ export default function MyBookings() {
     const [bookings, setBookings] = useState<Booking[]>([]);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
+    const fetchBookings = () => {
         axios.get('/api/bookings/my')
             .then(res => setBookings(res.data))
             .catch(err => console.error(err))
             .finally(() => setLoading(false));
+    };
+
+    useEffect(() => {
+        fetchBookings();
     }, []);
+
+    const handleCancel = async (id: number) => {
+        if (!confirm('Вы уверены что хотите отменить бронь?')) return;
+        try {
+            await axios.post(`/api/bookings/${id}/cancel`);
+            fetchBookings();
+        } catch (err: any) {
+            alert(err.response?.data?.message || 'Ошибка при отмене');
+        }
+    };
 
     const formatDate = (dateStr: string) => {
         return new Date(dateStr).toLocaleDateString('ru-RU', {
@@ -52,10 +67,15 @@ export default function MyBookings() {
             ) : (
                 <div className="flex flex-col gap-4">
                     {bookings.map(b => (
-                        <div key={b.id} className="bg-white rounded-xl border shadow-sm overflow-hidden">
-                            <div className="bg-[#003580] px-6 py-3 flex justify-between items-center">
+                        <div key={b.id} className={`bg-white rounded-xl border shadow-sm overflow-hidden ${b.status === 'Cancelled' ? 'opacity-60' : ''}`}>
+                            <div className={`px-6 py-3 flex justify-between items-center ${b.status === 'Cancelled' ? 'bg-gray-400' : 'bg-[#003580]'}`}>
                                 <span className="text-white font-bold">{b.hotelName}</span>
-                                <span className="text-blue-200 text-sm">📍 {b.city}</span>
+                                <div className="flex items-center gap-3">
+                                    <span className="text-blue-200 text-sm">📍 {b.city}</span>
+                                    <span className={`text-xs font-bold px-2 py-1 rounded-full ${b.status === 'Active' ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-600'}`}>
+                                        {b.status === 'Active' ? 'Активна' : 'Отменена'}
+                                    </span>
+                                </div>
                             </div>
                             <div className="p-6">
                                 <div className="grid grid-cols-3 gap-4 mb-4">
@@ -76,7 +96,17 @@ export default function MyBookings() {
                                     <p className="text-sm text-gray-400">
                                         {nights(b.checkIn, b.checkOut)} ноч. · Оформлено {formatDate(b.createdAt)}
                                     </p>
-                                    <p className="text-xl font-bold text-[#003580]">{b.totalPrice.toLocaleString()} ₸</p>
+                                    <div className="flex items-center gap-4">
+                                        <p className="text-xl font-bold text-[#003580]">{b.totalPrice.toLocaleString()} ₸</p>
+                                        {b.status === 'Active' && (
+                                            <button
+                                                onClick={() => handleCancel(b.id)}
+                                                className="text-sm text-red-500 border border-red-300 px-3 py-1.5 rounded-lg hover:bg-red-50 transition"
+                                            >
+                                                Отменить
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         </div>

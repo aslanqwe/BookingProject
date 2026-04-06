@@ -7,4 +7,6 @@ public class HotelDto
     public string Description { get; set; } = string.Empty;
     public string City { get; set; } = string.Empty;
     public decimal PricePerNight { get; set; }
+    public int Stars { get; set; } = 3;
+    public int TotalRooms { get; set; } = 10;
 }

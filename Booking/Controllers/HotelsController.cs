@@ -20,9 +20,10 @@ public class HotelsController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetHotels(
         [FromQuery] string? city,
-        [FromQuery] decimal? maxPrice)
+        [FromQuery] decimal? maxPrice,
+        [FromQuery] int? stars)
     {
-        var result = await _hotelService.GetAllAsync(city, maxPrice);
+        var result = await _hotelService.GetAllAsync(city, maxPrice, stars);
         return Ok(result);
     }
 
