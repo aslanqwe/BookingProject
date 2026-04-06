@@ -6,6 +6,7 @@ import Login from './Login'
 import AddHotel from './AddHotel'
 import HotelModal from './HotelModal';
 import MyBookings from './MyBookings';
+import OwnerDashboard from './OwnerDashboard';
 
 axios.defaults.withCredentials = true;
 
@@ -26,11 +27,10 @@ interface User {
 
 function App() {
     const [hotels, setHotels] = useState<Hotel[]>([])
-    const [view, setView] = useState<'list' | 'register' | 'login' | 'add-hotel' | 'my-bookings'>('list')
+    const [view, setView] = useState<'list' | 'register' | 'login' | 'add-hotel' | 'my-bookings' | 'owner-dashboard'>('list')
     const [user, setUser] = useState<User | null>(null)
     const [selectedHotel, setSelectedHotel] = useState<Hotel | null>(null)
     const [loading, setLoading] = useState(true)
-
     const [searchCity, setSearchCity] = useState('')
     const [checkIn, setCheckIn] = useState('')
     const [checkOut, setCheckOut] = useState('')
@@ -143,12 +143,26 @@ function App() {
                                         </button>
                                     )}
                                     {user.role === 'Owner' && (
-                                        <button
-                                            onClick={() => setView('add-hotel')}
-                                            className="text-sm font-bold px-4 py-2 rounded bg-green-500 hover:bg-green-600 transition"
-                                        >
-                                            + Добавить отель
-                                        </button>
+                                        <>
+                                            <button
+                                                onClick={() => setView('my-bookings')}
+                                                className="text-sm font-medium px-4 py-2 rounded border border-white/40 hover:bg-white/10 transition"
+                                            >
+                                                Мои брони
+                                            </button>
+                                            <button
+                                                onClick={() => setView('owner-dashboard')}
+                                                className="text-sm font-medium px-4 py-2 rounded border border-white/40 hover:bg-white/10 transition"
+                                            >
+                                                Мои отели
+                                            </button>
+                                            <button
+                                                onClick={() => setView('add-hotel')}
+                                                className="text-sm font-bold px-4 py-2 rounded bg-green-500 hover:bg-green-600 transition"
+                                            >
+                                                + Добавить отель
+                                            </button>
+                                        </>
                                     )}
                                     <button
                                         onClick={handleLogout}
@@ -191,6 +205,12 @@ function App() {
             {view === 'my-bookings' && (
                 <main className="container mx-auto py-8 px-4">
                     <MyBookings />
+                </main>
+            )}
+
+            {view === 'owner-dashboard' && (
+                <main className="container mx-auto py-8 px-4">
+                    <OwnerDashboard />
                 </main>
             )}
 

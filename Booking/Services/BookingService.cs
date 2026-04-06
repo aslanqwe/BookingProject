@@ -94,4 +94,26 @@ public class BookingService : IBookingService
         booking.Status = "Cancelled";
         await _context.SaveChangesAsync();
     }
+    
+    public async Task<IEnumerable<BookingDto>> GetBookingsForOwnerAsync(string ownerId)
+    {
+        return await _context.Bookings
+            .Include(b => b.Hotel)
+            .Where(b => b.Hotel.OwnerId == ownerId)
+            .OrderByDescending(b => b.CreatedAt)
+            .Select(b => new BookingDto
+            {
+                Id = b.Id,
+                HotelId = b.Hotel.Id,
+                HotelName = b.Hotel.Name,
+                City = b.Hotel.City,
+                CheckIn = b.CheckIn,
+                CheckOut = b.CheckOut,
+                Guests = b.Guests,
+                TotalPrice = b.TotalPrice,
+                Status = b.Status,
+                CreatedAt = b.CreatedAt
+            })
+            .ToListAsync();
+    }
 }

@@ -61,4 +61,15 @@ public class BookingsController : ControllerBase
             return BadRequest(new { message = ex.Message });
         }
     }
+    
+    [HttpGet("owner")]
+    [Authorize(Roles = "Owner")]
+    public async Task<IActionResult> GetOwnerBookings()
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+        var result = await _bookingService.GetBookingsForOwnerAsync(userId);
+        return Ok(result);
+    }
 }
