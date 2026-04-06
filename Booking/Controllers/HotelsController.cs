@@ -21,10 +21,18 @@ public class HotelsController : ControllerBase
     public async Task<IActionResult> GetHotels(
         [FromQuery] string? city,
         [FromQuery] decimal? maxPrice,
-        [FromQuery] int? stars)
+        [FromQuery] int? stars,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 5)
     {
-        var result = await _hotelService.GetAllAsync(city, maxPrice, stars);
-        return Ok(result);
+        var (hotels, totalCount) = await _hotelService.GetAllAsync(city, maxPrice, stars, page, pageSize);
+
+        return Ok(new {
+            hotels,
+            totalCount,
+            totalPages = (int)Math.Ceiling((double)totalCount / pageSize),
+            currentPage = page
+        });
     }
 
     [HttpPost]

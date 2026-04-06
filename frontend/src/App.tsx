@@ -38,17 +38,28 @@ function App() {
     const [maxPrice, setMaxPrice] = useState(500000)
     const [filterStars, setFilterStars] = useState(0)
     const [priceTimer, setPriceTimer] = useState<ReturnType<typeof setTimeout> | null>(null)
+    const [currentPage, setCurrentPage] = useState(1)
+    const [totalPages, setTotalPages] = useState(1)
+    const [totalCount, setTotalCount] = useState(0)
+    const PAGE_SIZE = 2
 
-    const fetchHotels = (city = '', price = 500000, stars = 0) => {
+    const fetchHotels = (city = '', price = 500000, stars = 0, page = 1) => {
         axios.get('/api/hotels', {
             params: {
                 city: city.trim() || undefined,
                 maxPrice: price < 500000 ? price : undefined,
-                stars: stars > 0 ? stars : undefined
+                stars: stars > 0 ? stars : undefined,
+                page,
+                pageSize: PAGE_SIZE
             }
         })
-            .then(res => setHotels(res.data))
-            .catch(err => console.error("Ошибка загрузки отелей:", err))
+            .then(res => {
+                setHotels(res.data.hotels)
+                setTotalPages(res.data.totalPages)
+                setTotalCount(res.data.totalCount)
+                setCurrentPage(res.data.currentPage)
+            })
+            .catch(err => console.error(err))
     }
 
     useEffect(() => {
@@ -80,13 +91,15 @@ function App() {
         setCheckOut('');
         setGuests(2);
         setFilterStars(0);
-        fetchHotels('', 500000, 0);
+        setCurrentPage(1);
+        fetchHotels('', 500000, 0, 1);
     };
 
     const handleStarsFilter = (stars: number) => {
         const newStars = filterStars === stars ? 0 : stars;
         setFilterStars(newStars);
-        fetchHotels(searchCity, maxPrice, newStars);
+        setCurrentPage(1);
+        fetchHotels(searchCity, maxPrice, newStars, 1);
     };
 
     if (loading) {
@@ -270,7 +283,7 @@ function App() {
                                         </div>
                                     </div>
                                     <button
-                                        onClick={() => fetchHotels(searchCity, maxPrice, filterStars)}
+                                        onClick={() => { setCurrentPage(1); fetchHotels(searchCity, maxPrice, filterStars, 1); }}
                                         className="bg-[#0071c2] hover:bg-[#005999] text-white font-bold px-8 py-3 rounded-r-md transition text-sm whitespace-nowrap"
                                     >
                                         Найти
@@ -304,7 +317,7 @@ function App() {
                                                 const val = Number(e.target.value);
                                                 setMaxPrice(val);
                                                 if (priceTimer) clearTimeout(priceTimer);
-                                                const timer = setTimeout(() => fetchHotels(searchCity, val, filterStars), 500);
+                                                const timer = setTimeout(() => { setCurrentPage(1); fetchHotels(searchCity, val, filterStars, 1); }, 500);
                                                 setPriceTimer(timer);
                                             }}
                                             className="w-full accent-blue-600"
@@ -346,7 +359,9 @@ function App() {
                                 <div className="flex justify-between items-center mb-4">
                                     <h2 className="text-xl font-bold text-gray-800">
                                         {searchCity ? `Отели в городе "${searchCity}"` : 'Все отели Казахстана'}
-                                        <span className="text-sm font-normal text-gray-500 ml-2">{hotels.length} вариантов</span>
+                                        <span className="text-sm font-normal text-gray-500 ml-2">
+                                            {totalCount} вариантов
+                                        </span>
                                     </h2>
                                 </div>
 
@@ -401,6 +416,36 @@ function App() {
                                                 </div>
                                             </div>
                                         ))}
+                                    </div>
+                                )}
+                                {/* ПАГИНАЦИЯ */}
+                                {totalPages > 1 && (
+                                    <div className="flex justify-center items-center gap-2 mt-6">
+                                        <button
+                                            onClick={() => { const p = currentPage - 1; setCurrentPage(p); fetchHotels(searchCity, maxPrice, filterStars, p); }}
+                                            disabled={currentPage === 1}
+                                            className="px-4 py-2 rounded border text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 transition"
+                                        >
+                                            ← Назад
+                                        </button>
+
+                                        {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+                                            <button
+                                                key={p}
+                                                onClick={() => { setCurrentPage(p); fetchHotels(searchCity, maxPrice, filterStars, p); }}
+                                                className={`w-10 h-10 rounded border text-sm font-medium transition ${currentPage === p ? 'bg-[#003580] text-white border-[#003580]' : 'hover:bg-gray-50'}`}
+                                            >
+                                                {p}
+                                            </button>
+                                        ))}
+
+                                        <button
+                                            onClick={() => { const p = currentPage + 1; setCurrentPage(p); fetchHotels(searchCity, maxPrice, filterStars, p); }}
+                                            disabled={currentPage === totalPages}
+                                            className="px-4 py-2 rounded border text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 transition"
+                                        >
+                                            Вперёд →
+                                        </button>
                                     </div>
                                 )}
                             </div>

@@ -14,7 +14,7 @@ public class HotelService : IHotelService
         _context = context;
     }
 
-    public async Task<IEnumerable<HotelDto>> GetAllAsync(string? city, decimal? maxPrice, int? stars)
+    public async Task<(IEnumerable<HotelDto> Hotels, int TotalCount)> GetAllAsync(string? city, decimal? maxPrice, int? stars, int page, int pageSize)
     {
         var query = _context.Hotels.AsQueryable();
 
@@ -27,7 +27,11 @@ public class HotelService : IHotelService
         if (stars.HasValue)
             query = query.Where(h => h.Stars == stars.Value);
 
-        return await query
+        var totalCount = await query.CountAsync();
+
+        var hotels = await query
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .Select(h => new HotelDto {
                 Id = h.Id,
                 Name = h.Name,
@@ -37,6 +41,8 @@ public class HotelService : IHotelService
                 Stars = h.Stars,
                 TotalRooms = h.TotalRooms
             }).ToListAsync();
+
+        return (hotels, totalCount);
     }
 
     public async Task<HotelDto> CreateAsync(HotelDto dto, string ownerId)
