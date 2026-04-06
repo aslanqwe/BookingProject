@@ -41,16 +41,18 @@ function App() {
     const [currentPage, setCurrentPage] = useState(1)
     const [totalPages, setTotalPages] = useState(1)
     const [totalCount, setTotalCount] = useState(0)
-    const PAGE_SIZE = 2
+    const PAGE_SIZE = 5
+    const [sortBy, setSortBy] = useState('')
 
-    const fetchHotels = (city = '', price = 500000, stars = 0, page = 1) => {
+    const fetchHotels = (city = '', price = 500000, stars = 0, page = 1, sort = '') => {
         axios.get('/api/hotels', {
             params: {
                 city: city.trim() || undefined,
                 maxPrice: price < 500000 ? price : undefined,
                 stars: stars > 0 ? stars : undefined,
                 page,
-                pageSize: PAGE_SIZE
+                pageSize: PAGE_SIZE,
+                sortBy: sort || undefined
             }
         })
             .then(res => {
@@ -92,14 +94,15 @@ function App() {
         setGuests(2);
         setFilterStars(0);
         setCurrentPage(1);
-        fetchHotels('', 500000, 0, 1);
+        setSortBy('');
+        fetchHotels('', 500000, 0, 1, '');
     };
 
     const handleStarsFilter = (stars: number) => {
         const newStars = filterStars === stars ? 0 : stars;
         setFilterStars(newStars);
         setCurrentPage(1);
-        fetchHotels(searchCity, maxPrice, newStars, 1);
+        fetchHotels(searchCity, maxPrice, newStars, 1, sortBy);
     };
 
     if (loading) {
@@ -283,7 +286,7 @@ function App() {
                                         </div>
                                     </div>
                                     <button
-                                        onClick={() => { setCurrentPage(1); fetchHotels(searchCity, maxPrice, filterStars, 1); }}
+                                        onClick={() => { setCurrentPage(1); fetchHotels(searchCity, maxPrice, filterStars, 1, sortBy); }}
                                         className="bg-[#0071c2] hover:bg-[#005999] text-white font-bold px-8 py-3 rounded-r-md transition text-sm whitespace-nowrap"
                                     >
                                         Найти
@@ -317,7 +320,7 @@ function App() {
                                                 const val = Number(e.target.value);
                                                 setMaxPrice(val);
                                                 if (priceTimer) clearTimeout(priceTimer);
-                                                const timer = setTimeout(() => { setCurrentPage(1); fetchHotels(searchCity, val, filterStars, 1); }, 500);
+                                                const timer = setTimeout(() => { setCurrentPage(1); fetchHotels(searchCity, val, filterStars, 1, sortBy); }, 500);
                                                 setPriceTimer(timer);
                                             }}
                                             className="w-full accent-blue-600"
@@ -353,7 +356,7 @@ function App() {
                                     </button>
                                 </div>
                             </aside>
-
+                            
                             {/* СПИСОК ОТЕЛЕЙ */}
                             <div className="flex-1">
                                 <div className="flex justify-between items-center mb-4">
@@ -363,8 +366,22 @@ function App() {
                                             {totalCount} вариантов
                                         </span>
                                     </h2>
+                                    <select
+                                        value={sortBy}
+                                        onChange={e => {
+                                            setSortBy(e.target.value);
+                                            setCurrentPage(1);
+                                            fetchHotels(searchCity, maxPrice, filterStars, 1, e.target.value);
+                                        }}
+                                        className="text-sm border border-gray-300 rounded-lg px-3 py-2 outline-none focus:border-blue-500 bg-white"
+                                    >
+                                        <option value="">По умолчанию</option>
+                                        <option value="price_asc">Цена: по возрастанию</option>
+                                        <option value="price_desc">Цена: по убыванию</option>
+                                        <option value="stars_desc">Звёзды: 5 → 1</option>
+                                        <option value="stars_asc">Звёзды: 1 → 5</option>
+                                    </select>
                                 </div>
-
                                 {hotels.length === 0 ? (
                                     <div className="bg-white rounded-lg border p-12 text-center">
                                         <p className="text-gray-400 text-lg">Ничего не найдено</p>
@@ -432,7 +449,7 @@ function App() {
                                         {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
                                             <button
                                                 key={p}
-                                                onClick={() => { setCurrentPage(p); fetchHotels(searchCity, maxPrice, filterStars, p); }}
+                                                onClick={() => { setCurrentPage(p); fetchHotels(searchCity, maxPrice, filterStars, p, sortBy); }}
                                                 className={`w-10 h-10 rounded border text-sm font-medium transition ${currentPage === p ? 'bg-[#003580] text-white border-[#003580]' : 'hover:bg-gray-50'}`}
                                             >
                                                 {p}

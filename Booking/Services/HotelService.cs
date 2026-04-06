@@ -14,18 +14,25 @@ public class HotelService : IHotelService
         _context = context;
     }
 
-    public async Task<(IEnumerable<HotelDto> Hotels, int TotalCount)> GetAllAsync(string? city, decimal? maxPrice, int? stars, int page, int pageSize)
+    public async Task<(IEnumerable<HotelDto> Hotels, int TotalCount)> GetAllAsync(string? city, decimal? maxPrice, int? stars, int page, int pageSize, string? sortBy)
     {
         var query = _context.Hotels.AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(city))
             query = query.Where(h => h.City.ToLower().Contains(city.ToLower()));
-
         if (maxPrice.HasValue)
             query = query.Where(h => h.PricePerNight <= maxPrice.Value);
-
         if (stars.HasValue)
             query = query.Where(h => h.Stars == stars.Value);
+
+        query = sortBy switch
+        {
+            "price_asc" => query.OrderBy(h => h.PricePerNight),
+            "price_desc" => query.OrderByDescending(h => h.PricePerNight),
+            "stars_desc" => query.OrderByDescending(h => h.Stars),
+            "stars_asc" => query.OrderBy(h => h.Stars),
+            _ => query.OrderBy(h => h.Id)
+        };
 
         var totalCount = await query.CountAsync();
 

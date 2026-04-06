@@ -23,10 +23,10 @@ public class HotelsController : ControllerBase
         [FromQuery] decimal? maxPrice,
         [FromQuery] int? stars,
         [FromQuery] int page = 1,
-        [FromQuery] int pageSize = 5)
+        [FromQuery] int pageSize = 5,
+        [FromQuery] string? sortBy = null)
     {
-        var (hotels, totalCount) = await _hotelService.GetAllAsync(city, maxPrice, stars, page, pageSize);
-
+        var (hotels, totalCount) = await _hotelService.GetAllAsync(city, maxPrice, stars, page, pageSize, sortBy);
         return Ok(new {
             hotels,
             totalCount,
