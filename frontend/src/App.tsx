@@ -18,6 +18,7 @@ interface Hotel {
     description?: string;
     stars: number;
     totalRooms: number;
+    imageUrl?: string;
 }
 
 interface User {
@@ -391,8 +392,17 @@ function App() {
                                     <div className="flex flex-col gap-4">
                                         {hotels.map(h => (
                                             <div key={h.id} className="bg-white rounded-lg border shadow-sm hover:shadow-md transition-shadow flex overflow-hidden">
-                                                <div className="w-48 shrink-0 bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center">
-                                                    <span className="text-blue-300 font-bold text-lg text-center px-2">{h.name}</span>
+                                                {/* Фото */}
+                                                <div className="w-48 shrink-0 bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center overflow-hidden">
+                                                    {h.imageUrl ? (
+                                                        <img
+                                                            src={`http://localhost:5033${h.imageUrl}`}
+                                                            alt={h.name}
+                                                            className="w-full h-full object-cover"
+                                                        />
+                                                    ) : (
+                                                        <span className="text-blue-300 font-bold text-lg text-center px-2">{h.name}</span>
+                                                    )}
                                                 </div>
                                                 <div className="flex-1 p-4 flex flex-col justify-between">
                                                     <div>

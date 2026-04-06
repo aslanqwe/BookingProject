@@ -46,7 +46,8 @@ public class HotelService : IHotelService
                 Description = h.Description,
                 PricePerNight = h.PricePerNight,
                 Stars = h.Stars,
-                TotalRooms = h.TotalRooms
+                TotalRooms = h.TotalRooms,
+                ImageUrl = h.ImageUrl 
             }).ToListAsync();
 
         return (hotels, totalCount);
@@ -61,7 +62,8 @@ public class HotelService : IHotelService
             PricePerNight = dto.PricePerNight,
             OwnerId = ownerId,
             Stars = dto.Stars,
-            TotalRooms = dto.TotalRooms
+            TotalRooms = dto.TotalRooms,
+            ImageUrl = dto.ImageUrl
         };
 
         _context.Hotels.Add(hotel);

@@ -78,7 +78,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-
+app.UseStaticFiles();
 app.UseCors("AllowReactApp");
 app.UseAuthentication();
 app.UseAuthorization();

@@ -10,4 +10,5 @@ public class Hotel
     public string? OwnerId { get; set; }
     public int Stars { get; set; } = 3;
     public int TotalRooms { get; set; } = 10;
+    public string? ImageUrl { get; set; }
 }

@@ -7,6 +7,7 @@ interface Hotel {
     city: string;
     pricePerNight: number;
     description?: string;
+    imageUrl?: string;
 }
 
 interface HotelModalProps {
@@ -79,9 +80,17 @@ const HotelModal: React.FC<HotelModalProps> = ({ hotel, onClose, checkIn: initia
                     </svg>
                 </button>
 
-                {/* Фото-заглушка */}
-                <div className="h-48 bg-gradient-to-br from-blue-100 to-blue-300 flex items-center justify-center relative">
-                    <span className="text-blue-400 font-bold text-4xl opacity-50">{hotel.name}</span>
+                {/* Фото */}
+                <div className="h-48 bg-gradient-to-br from-blue-100 to-blue-300 flex items-center justify-center relative overflow-hidden">
+                    {hotel.imageUrl ? (
+                        <img
+                            src={`http://localhost:5033${hotel.imageUrl}`}
+                            alt={hotel.name}
+                            className="w-full h-full object-cover"
+                        />
+                    ) : (
+                        <span className="text-blue-400 font-bold text-4xl opacity-50">{hotel.name}</span>
+                    )}
                     <div className="absolute bottom-4 left-4 bg-[#003580] text-white text-xs font-bold px-3 py-1 rounded-full uppercase">
                         📍 {hotel.city}
                     </div>
