@@ -3,7 +3,8 @@ using Booking.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
-
+using Booking.Data;
+using Microsoft.EntityFrameworkCore;
 namespace Booking.Controllers;
 
 [ApiController]
@@ -44,5 +45,32 @@ public class HotelsController : ControllerBase
 
         var result = await _hotelService.CreateAsync(hotelDto, userId);
         return Ok(result);
+    }
+    
+    [HttpGet("{id}/availability")]
+    public async Task<IActionResult> GetAvailability(
+        int id,
+        [FromQuery] DateTime checkIn,
+        [FromQuery] DateTime checkOut,
+        [FromServices] BookingDbContext context)
+    {
+        var hotel = await context.Hotels.FindAsync(id);
+        if (hotel == null) return NotFound();
+
+        var bookedRooms = await context.Bookings.CountAsync(b =>
+            b.HotelId == id &&
+            b.Status == "Active" &&
+            b.CheckIn < checkOut &&
+            b.CheckOut > checkIn
+        );
+
+        var availableRooms = hotel.TotalRooms - bookedRooms;
+
+        return Ok(new {
+            totalRooms = hotel.TotalRooms,
+            bookedRooms,
+            availableRooms,
+            isAvailable = availableRooms > 0
+        });
     }
 }

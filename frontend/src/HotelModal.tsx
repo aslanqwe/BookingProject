@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-
+import AvailabilityBadge from './AvailabilityBadge';
 interface Hotel {
     id: number;
     name: string;
@@ -25,14 +25,15 @@ const HotelModal: React.FC<HotelModalProps> = ({ hotel, onClose, checkIn: initia
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState(false);
     const [error, setError] = useState('');
-
+    const [rooms, setRooms] = useState(1);
+    
     if (!hotel) return null;
 
     const nights = checkIn && checkOut
         ? Math.max(0, (new Date(checkOut).getTime() - new Date(checkIn).getTime()) / (1000 * 60 * 60 * 24))
         : 0;
 
-    const totalPrice = nights * hotel.pricePerNight;
+    const totalPrice = nights * hotel.pricePerNight * rooms;
 
     const handleBook = async () => {
         if (!checkIn || !checkOut) {
@@ -52,7 +53,8 @@ const HotelModal: React.FC<HotelModalProps> = ({ hotel, onClose, checkIn: initia
                 hotelId: hotel.id,
                 checkIn: new Date(checkIn).toISOString(),
                 checkOut: new Date(checkOut).toISOString(),
-                guests
+                guests,
+                rooms
             });
             setSuccess(true);
         } catch (err: any) {
@@ -108,7 +110,7 @@ const HotelModal: React.FC<HotelModalProps> = ({ hotel, onClose, checkIn: initia
                             <p className="text-xs text-gray-400">за ночь</p>
                         </div>
                     </div>
-
+                    
                     {success ? (
                         /* Успешное бронирование */
                         <div className="bg-green-50 border border-green-200 rounded-xl p-6 text-center">
@@ -129,6 +131,16 @@ const HotelModal: React.FC<HotelModalProps> = ({ hotel, onClose, checkIn: initia
                         <>
                             <div className="bg-gray-50 rounded-xl p-4 mb-4">
                                 <h3 className="font-semibold text-gray-700 mb-3">Выберите даты</h3>
+                                {/* Доступность */}
+                                {checkIn && checkOut && (
+                                    <div className="mb-3">
+                                        <AvailabilityBadge
+                                            hotelId={hotel.id}
+                                            checkIn={checkIn}
+                                            checkOut={checkOut}
+                                        />
+                                    </div>
+                                )}
                                 <div className="grid grid-cols-2 gap-3 mb-3">
                                     <div>
                                         <label className="text-xs text-gray-500 block mb-1">Заезд</label>
@@ -153,18 +165,20 @@ const HotelModal: React.FC<HotelModalProps> = ({ hotel, onClose, checkIn: initia
                                 </div>
 
                                 <div>
-                                    <label className="text-xs text-gray-500 block mb-1">Количество гостей</label>
-                                    <div className="flex items-center gap-3">
-                                        <button
-                                            onClick={() => setGuests(g => Math.max(1, g - 1))}
-                                            className="w-8 h-8 rounded-full border border-blue-600 text-blue-600 font-bold flex items-center justify-center hover:bg-blue-50"
-                                        >−</button>
-                                        <span className="font-semibold text-gray-800 w-6 text-center">{guests}</span>
-                                        <button
-                                            onClick={() => setGuests(g => g + 1)}
-                                            className="w-8 h-8 rounded-full border border-blue-600 text-blue-600 font-bold flex items-center justify-center hover:bg-blue-50"
-                                        >+</button>
-                                        <span className="text-sm text-gray-500">гостей</span>
+                                    <label className="text-xs text-gray-500 block mb-1">Количество гостей и номеров</label>
+                                    <div className="flex items-center gap-4">
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xs text-gray-400">👤 Гостей</span>
+                                            <button onClick={() => setGuests(g => Math.max(1, g - 1))} className="w-7 h-7 rounded-full border border-blue-600 text-blue-600 font-bold flex items-center justify-center hover:bg-blue-50">−</button>
+                                            <span className="font-semibold text-gray-800 w-4 text-center">{guests}</span>
+                                            <button onClick={() => setGuests(g => g + 1)} className="w-7 h-7 rounded-full border border-blue-600 text-blue-600 font-bold flex items-center justify-center hover:bg-blue-50">+</button>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xs text-gray-400">🛏 Номеров</span>
+                                            <button onClick={() => setRooms(r => Math.max(1, r - 1))} className="w-7 h-7 rounded-full border border-blue-600 text-blue-600 font-bold flex items-center justify-center hover:bg-blue-50">−</button>
+                                            <span className="font-semibold text-gray-800 w-4 text-center">{rooms}</span>
+                                            <button onClick={() => setRooms(r => r + 1)} className="w-7 h-7 rounded-full border border-blue-600 text-blue-600 font-bold flex items-center justify-center hover:bg-blue-50">+</button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -174,7 +188,7 @@ const HotelModal: React.FC<HotelModalProps> = ({ hotel, onClose, checkIn: initia
                                 <div className="bg-blue-50 rounded-xl p-4 mb-4 flex justify-between items-center">
                                     <div>
                                         <p className="text-sm text-gray-600">
-                                            {hotel.pricePerNight.toLocaleString()} ₸ × {nights} ноч.
+                                            {hotel.pricePerNight.toLocaleString()} ₸ × {nights} ноч. × {rooms} номер.
                                         </p>
                                         <p className="text-xs text-gray-400">{guests} гостей</p>
                                     </div>

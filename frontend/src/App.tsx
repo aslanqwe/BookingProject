@@ -7,6 +7,7 @@ import AddHotel from './AddHotel'
 import HotelModal from './HotelModal';
 import MyBookings from './MyBookings';
 import OwnerDashboard from './OwnerDashboard';
+import AvailabilityBadge from './AvailabilityBadge';
 
 axios.defaults.withCredentials = true;
 
@@ -119,7 +120,6 @@ function App() {
 
     return (
         <div className="min-h-screen bg-gray-100">
-
             {/* ШАПКА */}
             <nav className="bg-[#003580] text-white shadow-md">
                 <div className="container mx-auto px-4">
@@ -133,18 +133,8 @@ function App() {
                         <div className="flex items-center gap-3">
                             {!user ? (
                                 <>
-                                    <button
-                                        onClick={() => setView('login')}
-                                        className="text-sm font-medium px-4 py-2 rounded border border-white/40 hover:bg-white/10 transition"
-                                    >
-                                        Войти
-                                    </button>
-                                    <button
-                                        onClick={() => setView('register')}
-                                        className="text-sm font-bold px-4 py-2 rounded bg-white text-[#003580] hover:bg-gray-100 transition"
-                                    >
-                                        Зарегистрироваться
-                                    </button>
+                                    <button onClick={() => setView('login')} className="text-sm font-medium px-4 py-2 rounded border border-white/40 hover:bg-white/10 transition">Войти</button>
+                                    <button onClick={() => setView('register')} className="text-sm font-bold px-4 py-2 rounded bg-white text-[#003580] hover:bg-gray-100 transition">Зарегистрироваться</button>
                                 </>
                             ) : (
                                 <>
@@ -152,41 +142,16 @@ function App() {
                                         {user.email} <strong className="text-white">({user.role})</strong>
                                     </span>
                                     {user.role === 'User' && (
-                                        <button
-                                            onClick={() => setView('my-bookings')}
-                                            className="text-sm font-medium px-4 py-2 rounded border border-white/40 hover:bg-white/10 transition"
-                                        >
-                                            Мои брони
-                                        </button>
+                                        <button onClick={() => setView('my-bookings')} className="text-sm font-medium px-4 py-2 rounded border border-white/40 hover:bg-white/10 transition">Мои брони</button>
                                     )}
                                     {user.role === 'Owner' && (
                                         <>
-                                            <button
-                                                onClick={() => setView('my-bookings')}
-                                                className="text-sm font-medium px-4 py-2 rounded border border-white/40 hover:bg-white/10 transition"
-                                            >
-                                                Мои брони
-                                            </button>
-                                            <button
-                                                onClick={() => setView('owner-dashboard')}
-                                                className="text-sm font-medium px-4 py-2 rounded border border-white/40 hover:bg-white/10 transition"
-                                            >
-                                                Мои отели
-                                            </button>
-                                            <button
-                                                onClick={() => setView('add-hotel')}
-                                                className="text-sm font-bold px-4 py-2 rounded bg-green-500 hover:bg-green-600 transition"
-                                            >
-                                                + Добавить отель
-                                            </button>
+                                            <button onClick={() => setView('my-bookings')} className="text-sm font-medium px-4 py-2 rounded border border-white/40 hover:bg-white/10 transition">Мои брони</button>
+                                            <button onClick={() => setView('owner-dashboard')} className="text-sm font-medium px-4 py-2 rounded border border-white/40 hover:bg-white/10 transition">Мои отели</button>
+                                            <button onClick={() => setView('add-hotel')} className="text-sm font-bold px-4 py-2 rounded bg-green-500 hover:bg-green-600 transition">+ Добавить отель</button>
                                         </>
                                     )}
-                                    <button
-                                        onClick={handleLogout}
-                                        className="text-sm px-4 py-2 rounded border border-white/40 hover:bg-white/10 transition"
-                                    >
-                                        Выйти
-                                    </button>
+                                    <button onClick={handleLogout} className="text-sm px-4 py-2 rounded border border-white/40 hover:bg-white/10 transition">Выйти</button>
                                 </>
                             )}
                         </div>
@@ -194,42 +159,19 @@ function App() {
                 </div>
             </nav>
 
-            {view === 'register' && (
-                <main className="container mx-auto py-8 px-4">
-                    <Register />
-                </main>
-            )}
+            {view === 'register' && <main className="container mx-auto py-8 px-4"><Register /></main>}
             {view === 'login' && (
                 <main className="container mx-auto py-8 px-4">
-                    <Login onLoginSuccess={(userData) => {
-                        setUser(userData);
-                        fetchHotels();
-                        setView('list');
-                    }} />
+                    <Login onLoginSuccess={(userData) => { setUser(userData); fetchHotels(); setView('list'); }} />
                 </main>
             )}
             {view === 'add-hotel' && user && (
                 <main className="container mx-auto py-8 px-4">
-                    <AddHotel
-                        ownerEmail={user.email}
-                        onSuccess={() => {
-                            fetchHotels();
-                            setView('list');
-                        }}
-                    />
+                    <AddHotel ownerEmail={user.email} onSuccess={() => { fetchHotels(); setView('list'); }} />
                 </main>
             )}
-            {view === 'my-bookings' && (
-                <main className="container mx-auto py-8 px-4">
-                    <MyBookings />
-                </main>
-            )}
-
-            {view === 'owner-dashboard' && (
-                <main className="container mx-auto py-8 px-4">
-                    <OwnerDashboard />
-                </main>
-            )}
+            {view === 'my-bookings' && <main className="container mx-auto py-8 px-4"><MyBookings /></main>}
+            {view === 'owner-dashboard' && <main className="container mx-auto py-8 px-4"><OwnerDashboard /></main>}
 
             {view === 'list' && (
                 <>
@@ -238,7 +180,6 @@ function App() {
                         <div className="container mx-auto px-4">
                             <h2 className="text-3xl font-bold text-white mb-1">Отели в Казахстане</h2>
                             <p className="text-blue-200 mb-6 text-sm">Найдите идеальное жильё для вашей поездки</p>
-
                             <div className="bg-[#febb02] p-1 rounded-lg inline-block w-full">
                                 <div className="bg-white rounded-md flex flex-col md:flex-row">
                                     <div className="flex items-center gap-2 px-4 py-3 flex-1 border-b md:border-b-0 md:border-r border-gray-200">
@@ -252,7 +193,7 @@ function App() {
                                             className="outline-none text-sm w-full text-gray-700 placeholder-gray-400"
                                             value={searchCity}
                                             onChange={e => setSearchCity(e.target.value)}
-                                            onKeyDown={e => e.key === 'Enter' && fetchHotels(searchCity, maxPrice, filterStars)}
+                                            onKeyDown={e => e.key === 'Enter' && fetchHotels(searchCity, maxPrice, filterStars, 1, sortBy)}
                                         />
                                     </div>
                                     <div className="flex items-center gap-2 px-4 py-3 border-b md:border-b-0 md:border-r border-gray-200">
@@ -305,18 +246,12 @@ function App() {
                             <aside className="lg:w-64 shrink-0">
                                 <div className="bg-white rounded-lg shadow-sm border p-4">
                                     <h3 className="font-bold text-gray-800 mb-4">Фильтры</h3>
-
-                                    {/* Фильтр по цене */}
                                     <div className="mb-5">
                                         <p className="text-sm font-semibold text-gray-700 mb-2">
                                             Цена за ночь до: <span className="text-blue-600">{maxPrice.toLocaleString()} ₸</span>
                                         </p>
                                         <input
-                                            type="range"
-                                            min={1000}
-                                            max={500000}
-                                            step={1000}
-                                            value={maxPrice}
+                                            type="range" min={1000} max={500000} step={1000} value={maxPrice}
                                             onChange={e => {
                                                 const val = Number(e.target.value);
                                                 setMaxPrice(val);
@@ -331,8 +266,6 @@ function App() {
                                             <span>500 000 ₸</span>
                                         </div>
                                     </div>
-
-                                    {/* Фильтр по звёздам */}
                                     <div className="mb-5">
                                         <p className="text-sm font-semibold text-gray-700 mb-2">Звёзды</p>
                                         <div className="flex flex-col gap-2">
@@ -348,32 +281,22 @@ function App() {
                                             ))}
                                         </div>
                                     </div>
-
-                                    <button
-                                        onClick={handleReset}
-                                        className="w-full text-sm text-blue-600 border border-blue-200 rounded py-2 hover:bg-blue-50 transition"
-                                    >
+                                    <button onClick={handleReset} className="w-full text-sm text-blue-600 border border-blue-200 rounded py-2 hover:bg-blue-50 transition">
                                         Сбросить фильтры
                                     </button>
                                 </div>
                             </aside>
-                            
+
                             {/* СПИСОК ОТЕЛЕЙ */}
                             <div className="flex-1">
                                 <div className="flex justify-between items-center mb-4">
                                     <h2 className="text-xl font-bold text-gray-800">
                                         {searchCity ? `Отели в городе "${searchCity}"` : 'Все отели Казахстана'}
-                                        <span className="text-sm font-normal text-gray-500 ml-2">
-                                            {totalCount} вариантов
-                                        </span>
+                                        <span className="text-sm font-normal text-gray-500 ml-2">{totalCount} вариантов</span>
                                     </h2>
                                     <select
                                         value={sortBy}
-                                        onChange={e => {
-                                            setSortBy(e.target.value);
-                                            setCurrentPage(1);
-                                            fetchHotels(searchCity, maxPrice, filterStars, 1, e.target.value);
-                                        }}
+                                        onChange={e => { setSortBy(e.target.value); setCurrentPage(1); fetchHotels(searchCity, maxPrice, filterStars, 1, e.target.value); }}
                                         className="text-sm border border-gray-300 rounded-lg px-3 py-2 outline-none focus:border-blue-500 bg-white"
                                     >
                                         <option value="">По умолчанию</option>
@@ -383,6 +306,7 @@ function App() {
                                         <option value="stars_asc">Звёзды: 1 → 5</option>
                                     </select>
                                 </div>
+
                                 {hotels.length === 0 ? (
                                     <div className="bg-white rounded-lg border p-12 text-center">
                                         <p className="text-gray-400 text-lg">Ничего не найдено</p>
@@ -395,11 +319,7 @@ function App() {
                                                 {/* Фото */}
                                                 <div className="w-48 shrink-0 bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center overflow-hidden">
                                                     {h.imageUrl ? (
-                                                        <img
-                                                            src={`http://localhost:5033${h.imageUrl}`}
-                                                            alt={h.name}
-                                                            className="w-full h-full object-cover"
-                                                        />
+                                                        <img src={`http://localhost:5033${h.imageUrl}`} alt={h.name} className="w-full h-full object-cover" />
                                                     ) : (
                                                         <span className="text-blue-300 font-bold text-lg text-center px-2">{h.name}</span>
                                                     )}
@@ -410,10 +330,19 @@ function App() {
                                                             <div>
                                                                 <h3 className="text-lg font-bold text-blue-700">{h.name}</h3>
                                                                 <p className="text-sm text-gray-500 mt-0.5">📍 {h.city}</p>
-                                                                {/* Звёзды */}
                                                                 <p className="text-yellow-400 text-sm mt-1">
                                                                     {'★'.repeat(h.stars)}{'☆'.repeat(5 - h.stars)}
                                                                 </p>
+                                                                {/* ДОСТУПНОСТЬ — здесь, под звёздами */}
+                                                                {checkIn && checkOut && (
+                                                                    <div className="mt-1">
+                                                                        <AvailabilityBadge
+                                                                            hotelId={h.id}
+                                                                            checkIn={checkIn}
+                                                                            checkOut={checkOut}
+                                                                        />
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                             <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">
                                                                 {h.totalRooms} номеров
@@ -445,34 +374,27 @@ function App() {
                                         ))}
                                     </div>
                                 )}
+
                                 {/* ПАГИНАЦИЯ */}
                                 {totalPages > 1 && (
                                     <div className="flex justify-center items-center gap-2 mt-6">
                                         <button
-                                            onClick={() => { const p = currentPage - 1; setCurrentPage(p); fetchHotels(searchCity, maxPrice, filterStars, p); }}
+                                            onClick={() => { const p = currentPage - 1; setCurrentPage(p); fetchHotels(searchCity, maxPrice, filterStars, p, sortBy); }}
                                             disabled={currentPage === 1}
                                             className="px-4 py-2 rounded border text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 transition"
-                                        >
-                                            ← Назад
-                                        </button>
-
+                                        >← Назад</button>
                                         {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
                                             <button
                                                 key={p}
                                                 onClick={() => { setCurrentPage(p); fetchHotels(searchCity, maxPrice, filterStars, p, sortBy); }}
                                                 className={`w-10 h-10 rounded border text-sm font-medium transition ${currentPage === p ? 'bg-[#003580] text-white border-[#003580]' : 'hover:bg-gray-50'}`}
-                                            >
-                                                {p}
-                                            </button>
+                                            >{p}</button>
                                         ))}
-
                                         <button
-                                            onClick={() => { const p = currentPage + 1; setCurrentPage(p); fetchHotels(searchCity, maxPrice, filterStars, p); }}
+                                            onClick={() => { const p = currentPage + 1; setCurrentPage(p); fetchHotels(searchCity, maxPrice, filterStars, p, sortBy); }}
                                             disabled={currentPage === totalPages}
                                             className="px-4 py-2 rounded border text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 transition"
-                                        >
-                                            Вперёд →
-                                        </button>
+                                        >Вперёд →</button>
                                     </div>
                                 )}
                             </div>

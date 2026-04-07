@@ -12,4 +12,5 @@ public class Booking
     public decimal TotalPrice { get; set; }
     public string Status { get; set; } = "Active";
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public int Rooms { get; set; } = 1;
 }

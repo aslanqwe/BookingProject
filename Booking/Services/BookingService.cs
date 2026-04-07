@@ -30,8 +30,8 @@ public class BookingService : IBookingService
             b.CheckOut > dto.CheckIn
         );
 
-        if (bookedRooms >= hotel.TotalRooms)
-            throw new Exception($"Свободных номеров нет. Все {hotel.TotalRooms} номеров заняты на эти даты");
+        if (bookedRooms + dto.Rooms > hotel.TotalRooms)
+            throw new Exception($"Недостаточно свободных номеров. Доступно: {hotel.TotalRooms - bookedRooms}, запрошено: {dto.Rooms}");
 
         var booking = new Models.Booking
         {
@@ -40,7 +40,8 @@ public class BookingService : IBookingService
             CheckIn = dto.CheckIn,
             CheckOut = dto.CheckOut,
             Guests = dto.Guests,
-            TotalPrice = hotel.PricePerNight * nights,
+            Rooms = dto.Rooms,  
+            TotalPrice = hotel.PricePerNight * nights * dto.Rooms, 
             Status = "Active"
         };
 
