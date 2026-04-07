@@ -202,7 +202,17 @@ function App() {
                                         </svg>
                                         <div>
                                             <p className="text-xs text-gray-400">Заезд</p>
-                                            <input type="date" className="outline-none text-sm text-gray-700" value={checkIn} onChange={e => setCheckIn(e.target.value)} />
+                                            {/* Дата заезда */}
+                                            <input
+                                                type="date"
+                                                className="outline-none text-sm text-gray-700"
+                                                value={checkIn}
+                                                min={new Date().toISOString().split('T')[0]}
+                                                onChange={e => {
+                                                    setCheckIn(e.target.value);
+                                                    if (checkOut && e.target.value > checkOut) setCheckOut('');
+                                                }}
+                                            />
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2 px-4 py-3 border-b md:border-b-0 md:border-r border-gray-200">
@@ -211,7 +221,14 @@ function App() {
                                         </svg>
                                         <div>
                                             <p className="text-xs text-gray-400">Выезд</p>
-                                            <input type="date" className="outline-none text-sm text-gray-700" value={checkOut} onChange={e => setCheckOut(e.target.value)} />
+                                            {/* Дата выезда */}
+                                            <input
+                                                type="date"
+                                                className="outline-none text-sm text-gray-700"
+                                                value={checkOut}
+                                                min={checkIn || new Date().toISOString().split('T')[0]}
+                                                onChange={e => setCheckOut(e.target.value)}
+                                            />
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2 px-4 py-3 border-b md:border-b-0 md:border-r border-gray-200">
