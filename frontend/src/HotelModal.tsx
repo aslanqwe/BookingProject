@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect  } from 'react';
 import axios from 'axios';
 import AvailabilityBadge from './AvailabilityBadge';
 interface Hotel {
@@ -26,6 +26,15 @@ const HotelModal: React.FC<HotelModalProps> = ({ hotel, onClose, checkIn: initia
     const [success, setSuccess] = useState(false);
     const [error, setError] = useState('');
     const [rooms, setRooms] = useState(1);
+
+    useEffect(() => {
+        setCheckIn(initialCheckIn);
+        setCheckOut(initialCheckOut);
+        setGuests(initialGuests);
+        setRooms(1);
+        setError('');
+        setSuccess(false);
+    }, [hotel?.id]);
     
     if (!hotel) return null;
 
