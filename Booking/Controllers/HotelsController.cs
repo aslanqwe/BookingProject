@@ -73,4 +73,38 @@ public class HotelsController : ControllerBase
             isAvailable = availableRooms > 0
         });
     }
+    
+    [HttpPut("{id}")]
+    [Authorize(Roles = "Owner")]
+    public async Task<IActionResult> UpdateHotel(int id, [FromBody] HotelDto hotelDto)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+        var result = await _hotelService.UpdateAsync(id, hotelDto, userId);
+        if (result == null) return NotFound(new { message = "Отель не найден или нет доступа" });
+
+        return Ok(result);
+    }
+    
+    [HttpGet("my")]
+    [Authorize(Roles = "Owner")]
+    public async Task<IActionResult> GetMyHotels([FromServices] BookingDbContext context)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var hotels = await context.Hotels
+            .Where(h => h.OwnerId == userId)
+            .Select(h => new HotelDto {
+                Id = h.Id,
+                Name = h.Name,
+                City = h.City,
+                Description = h.Description,
+                PricePerNight = h.PricePerNight,
+                Stars = h.Stars,
+                TotalRooms = h.TotalRooms,
+                ImageUrl = h.ImageUrl
+            }).ToListAsync();
+
+        return Ok(hotels);
+    }
 }

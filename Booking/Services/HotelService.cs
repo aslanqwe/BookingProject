@@ -72,4 +72,32 @@ public class HotelService : IHotelService
         dto.Id = hotel.Id;
         return dto;
     }
+    
+    public async Task<HotelDto?> UpdateAsync(int id, HotelDto dto, string ownerId)
+    {
+        var hotel = await _context.Hotels.FindAsync(id);
+        if (hotel == null || hotel.OwnerId != ownerId) return null;
+
+        hotel.Name = dto.Name;
+        hotel.City = dto.City;
+        hotel.Description = dto.Description;
+        hotel.PricePerNight = dto.PricePerNight;
+        hotel.Stars = dto.Stars;
+        hotel.TotalRooms = dto.TotalRooms;
+        if (!string.IsNullOrEmpty(dto.ImageUrl))
+            hotel.ImageUrl = dto.ImageUrl;
+
+        await _context.SaveChangesAsync();
+
+        return new HotelDto {
+            Id = hotel.Id,
+            Name = hotel.Name,
+            City = hotel.City,
+            Description = hotel.Description,
+            PricePerNight = hotel.PricePerNight,
+            Stars = hotel.Stars,
+            TotalRooms = hotel.TotalRooms,
+            ImageUrl = hotel.ImageUrl
+        };
+    }
 }
