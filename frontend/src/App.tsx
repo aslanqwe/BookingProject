@@ -336,7 +336,7 @@ function App() {
                                                 {/* Фото */}
                                                 <div className="w-48 shrink-0 bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center overflow-hidden">
                                                     {h.imageUrl ? (
-                                                        <img src={`http://localhost:5033${h.imageUrl}`} alt={h.name} className="w-full h-full object-cover" />
+                                                        <img src={h.imageUrl} alt={h.name} className="w-full h-full object-cover" />
                                                     ) : (
                                                         <span className="text-blue-300 font-bold text-lg text-center px-2">{h.name}</span>
                                                     )}

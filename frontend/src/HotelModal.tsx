@@ -86,7 +86,7 @@ const HotelModal: React.FC<HotelModalProps> = ({ hotel, onClose, checkIn: initia
                 <div className="h-48 bg-gradient-to-br from-blue-100 to-blue-300 flex items-center justify-center relative overflow-hidden">
                     {hotel.imageUrl ? (
                         <img
-                            src={`http://localhost:5033${hotel.imageUrl}`}
+                            src={hotel.imageUrl}
                             alt={hotel.name}
                             className="w-full h-full object-cover"
                         />

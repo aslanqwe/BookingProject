@@ -87,10 +87,22 @@ app.MapControllers();
 // Сидирование ролей
 using (var scope = app.Services.CreateScope())
 {
+    try
+    {
+        var db = scope.ServiceProvider.GetRequiredService<BookingDbContext>();
+        db.Database.Migrate();
+        Console.WriteLine("✅ Миграции применены успешно");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"❌ Ошибка миграции: {ex.Message}");
+    }
+    
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
     foreach (var role in new[] { "Admin", "Owner", "User" })
     {
-        if (!await roleManager.RoleExistsAsync(role)) await roleManager.CreateAsync(new IdentityRole(role));
+        if (!await roleManager.RoleExistsAsync(role)) 
+            await roleManager.CreateAsync(new IdentityRole(role));
     }
 }
 
