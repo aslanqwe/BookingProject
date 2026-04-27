@@ -15,4 +15,5 @@ public class BookingDbContext : IdentityDbContext
 
     public DbSet<Hotel> Hotels { get; set; }
     public DbSet<Booking.Models.Booking> Bookings { get; set; } 
+    public DbSet<RoomType> RoomTypes { get; set; } 
 }

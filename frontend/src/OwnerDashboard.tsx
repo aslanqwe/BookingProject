@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import EditHotelModal from './EditHotelModal';
+import ManageRoomTypes from './ManageRoomTypes';
 
 interface Booking {
     id: number;
@@ -30,6 +31,7 @@ export default function OwnerDashboard() {
     const [myHotels, setMyHotels] = useState<Hotel[]>([]);
     const [loading, setLoading] = useState(true);
     const [editingHotel, setEditingHotel] = useState<Hotel | null>(null);
+    const [managingRoomsHotel, setManagingRoomsHotel] = useState<Hotel | null>(null);
 
     const fetchData = () => {
         Promise.all([
@@ -115,12 +117,23 @@ export default function OwnerDashboard() {
                                 <p className="text-yellow-400 text-sm">{'★'.repeat(hotel.stars)}{'☆'.repeat(5 - hotel.stars)}</p>
                                 <p className="text-sm text-gray-600">{hotel.pricePerNight.toLocaleString()} ₸/ночь · {hotel.totalRooms} номеров</p>
                             </div>
-                            <button
-                                onClick={() => setEditingHotel(hotel)}
-                                className="px-4 py-2 bg-blue-600 text-white text-sm font-bold rounded-lg hover:bg-blue-700 transition"
-                            >
-                                ✏️ Редактировать
-                            </button>
+
+                            {/* Обновленный блок кнопок */}
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => setManagingRoomsHotel(hotel)}
+                                    className="px-4 py-2 bg-green-600 text-white text-sm font-bold rounded-lg hover:bg-green-700 transition"
+                                >
+                                    🛏 Номера
+                                </button>
+                                <button
+                                    onClick={() => setEditingHotel(hotel)}
+                                    className="px-4 py-2 bg-blue-600 text-white text-sm font-bold rounded-lg hover:bg-blue-700 transition"
+                                >
+                                    ✏️ Изменить
+                                </button>
+                            </div>
+
                         </div>
                     </div>
                 ))}
@@ -187,6 +200,16 @@ export default function OwnerDashboard() {
                     setEditingHotel(null);
                 }}
             />
+
+            {/* Модальное окно управления номерами */}
+            {managingRoomsHotel && (
+                <ManageRoomTypes
+                    hotelId={managingRoomsHotel.id}
+                    hotelName={managingRoomsHotel.name}
+                    onClose={() => setManagingRoomsHotel(null)}
+                />
+            )}
+
         </div>
     );
 }

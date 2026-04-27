@@ -4,10 +4,10 @@ import './index.css'
 import Register from './Register'
 import Login from './Login'
 import AddHotel from './AddHotel'
-import HotelModal from './HotelModal';
 import MyBookings from './MyBookings';
 import OwnerDashboard from './OwnerDashboard';
 import AvailabilityBadge from './AvailabilityBadge';
+import HotelPage from './HotelPage';
 
 axios.defaults.withCredentials = true;
 
@@ -20,6 +20,7 @@ interface Hotel {
     stars: number;
     totalRooms: number;
     imageUrl?: string;
+    propertyType: string;
 }
 
 interface User {
@@ -29,9 +30,8 @@ interface User {
 
 function App() {
     const [hotels, setHotels] = useState<Hotel[]>([])
-    const [view, setView] = useState<'list' | 'register' | 'login' | 'add-hotel' | 'my-bookings' | 'owner-dashboard'>('list')
+    const [view, setView] = useState<'list' | 'register' | 'login' | 'add-hotel' | 'my-bookings' | 'owner-dashboard' | 'hotel-page'>('list')
     const [user, setUser] = useState<User | null>(null)
-    const [selectedHotel, setSelectedHotel] = useState<Hotel | null>(null)
     const [loading, setLoading] = useState(true)
     const [searchCity, setSearchCity] = useState('')
     const [checkIn, setCheckIn] = useState('')
@@ -43,6 +43,7 @@ function App() {
     const [currentPage, setCurrentPage] = useState(1)
     const [totalPages, setTotalPages] = useState(1)
     const [totalCount, setTotalCount] = useState(0)
+    const [hotelPageHotel, setHotelPageHotel] = useState<Hotel | null>(null)
     const PAGE_SIZE = 5
     const [sortBy, setSortBy] = useState('')
 
@@ -172,7 +173,18 @@ function App() {
             )}
             {view === 'my-bookings' && <main className="container mx-auto py-8 px-4"><MyBookings /></main>}
             {view === 'owner-dashboard' && <main className="container mx-auto py-8 px-4"><OwnerDashboard /></main>}
-
+            
+            {view === 'hotel-page' && hotelPageHotel && (
+                <HotelPage
+                    hotel={hotelPageHotel}
+                    checkIn={checkIn}
+                    checkOut={checkOut}
+                    guests={guests}
+                    onBack={() => setView('list')}
+                    onBookingSuccess={() => {}}
+                />
+            )}
+            
             {view === 'list' && (
                 <>
                     {/* ГЕРОБЛОК */}
@@ -379,7 +391,10 @@ function App() {
                                                             <p className="text-2xl font-bold text-gray-900">{h.pricePerNight.toLocaleString()} ₸</p>
                                                             <p className="text-xs text-gray-400 mb-2">за ночь</p>
                                                             <button
-                                                                onClick={() => setSelectedHotel(h)}
+                                                                onClick={() => {
+                                                                    setHotelPageHotel(h);
+                                                                    setView('hotel-page');
+                                                                }}
                                                                 className="bg-[#0071c2] hover:bg-[#005999] text-white text-sm font-bold px-5 py-2 rounded transition"
                                                             >
                                                                 Смотреть
@@ -419,14 +434,6 @@ function App() {
                     </div>
                 </>
             )}
-
-            <HotelModal
-                hotel={selectedHotel}
-                onClose={() => setSelectedHotel(null)}
-                checkIn={checkIn}
-                checkOut={checkOut}
-                guests={guests}
-            />
         </div>
     )
 }
