@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using Booking.Data;
 using Microsoft.EntityFrameworkCore;
+
 namespace Booking.Controllers;
 
 [ApiController]
@@ -23,11 +24,17 @@ public class HotelsController : ControllerBase
         [FromQuery] string? city,
         [FromQuery] decimal? maxPrice,
         [FromQuery] int? stars,
+        [FromQuery] DateTime? checkIn, 
+        [FromQuery] DateTime? checkOut, 
+        [FromQuery] int? guests, 
+        [FromQuery] int? rooms, 
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 5,
         [FromQuery] string? sortBy = null)
     {
-        var (hotels, totalCount) = await _hotelService.GetAllAsync(city, maxPrice, stars, page, pageSize, sortBy);
+        var (hotels, totalCount) = await _hotelService.GetAllAsync(
+            city, maxPrice, stars, checkIn, checkOut, guests, rooms, page, pageSize, sortBy);
+
         return Ok(new {
             hotels,
             totalCount,
@@ -35,7 +42,7 @@ public class HotelsController : ControllerBase
             currentPage = page
         });
     }
-
+    
     [HttpPost]
     [Authorize(Roles = "Owner")]
     public async Task<IActionResult> CreateHotel([FromBody] HotelDto hotelDto)
@@ -47,6 +54,14 @@ public class HotelsController : ControllerBase
         return Ok(result);
     }
     
+    [HttpGet("{id}")]
+    public async Task<IActionResult> GetHotelById(int id)
+    {
+        var hotel = await _hotelService.GetByIdAsync(id);
+        if (hotel == null) return NotFound();
+        return Ok(hotel);
+    }
+    
     [HttpGet("{id}/availability")]
     public async Task<IActionResult> GetAvailability(
         int id,
@@ -54,26 +69,32 @@ public class HotelsController : ControllerBase
         [FromQuery] DateTime checkOut,
         [FromServices] BookingDbContext context)
     {
-        var hotel = await context.Hotels.FindAsync(id);
+        var hotel = await context.Hotels
+            .Include(h => h.RoomTypes)
+            .FirstOrDefaultAsync(h => h.Id == id);
         if (hotel == null) return NotFound();
 
-        var bookedRooms = await context.Bookings.CountAsync(b =>
-            b.HotelId == id &&
-            b.Status == "Active" &&
-            b.CheckIn < checkOut &&
-            b.CheckOut > checkIn
-        );
+        var totalRooms = hotel.RoomTypes.Sum(rt => rt.TotalRooms);
 
-        var availableRooms = hotel.TotalRooms - bookedRooms;
+        var bookedRooms = await context.Bookings
+            .Where(b =>
+                b.HotelId == id &&
+                b.Status == "Active" &&
+                b.CheckIn < checkOut &&
+                b.CheckOut > checkIn)
+            .SumAsync(b => b.Rooms);
 
-        return Ok(new {
-            totalRooms = hotel.TotalRooms,
+        var availableRooms = totalRooms - bookedRooms;
+
+        return Ok(new
+        {
+            totalRooms,
             bookedRooms,
             availableRooms,
             isAvailable = availableRooms > 0
         });
     }
-    
+
     [HttpPut("{id}")]
     [Authorize(Roles = "Owner")]
     public async Task<IActionResult> UpdateHotel(int id, [FromBody] HotelDto hotelDto)
@@ -86,25 +107,32 @@ public class HotelsController : ControllerBase
 
         return Ok(result);
     }
-    
+
     [HttpGet("my")]
     [Authorize(Roles = "Owner")]
     public async Task<IActionResult> GetMyHotels([FromServices] BookingDbContext context)
     {
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         var hotels = await context.Hotels
+            .Include(h => h.RoomTypes)
             .Where(h => h.OwnerId == userId)
-            .Select(h => new HotelDto {
-                Id = h.Id,
-                Name = h.Name,
-                City = h.City,
-                Description = h.Description,
-                PricePerNight = h.PricePerNight,
-                Stars = h.Stars,
-                TotalRooms = h.TotalRooms,
-                ImageUrl = h.ImageUrl
-            }).ToListAsync();
+            .ToListAsync();
 
-        return Ok(hotels);
+        var result = hotels.Select(h => new HotelDto
+        {
+            Id = h.Id,
+            Name = h.Name,
+            City = h.City,
+            Address = h.Address,
+            Description = h.Description,
+            PricePerNight = h.PricePerNight,
+            Stars = h.Stars,
+            ImageUrl = h.ImageUrl,
+            PropertyType = h.PropertyType,
+            HotelAmenities = h.HotelAmenities,
+            TotalRooms = h.RoomTypes.Sum(rt => rt.TotalRooms)
+        });
+
+        return Ok(result);
     }
 }

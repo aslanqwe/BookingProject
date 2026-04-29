@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import {useState, useEffect} from "react";
 import axios from "axios";
 
 interface Hotel {
@@ -12,6 +12,7 @@ interface Hotel {
     totalRooms: number;
     imageUrl?: string;
     propertyType: string;
+    hotelAmenities?: string;
 }
 
 interface EditHotelModalProps {
@@ -21,12 +22,18 @@ interface EditHotelModalProps {
 }
 
 const PROPERTY_TYPES = ['Отель', 'Апартаменты', 'Хостел', 'Гостевой дом', 'Вилла'];
+const HOTEL_AMENITIES = [
+    'Бесплатный Wi-Fi', 'Парковка', 'Бассейн', 'Ресторан',
+    'Спа', 'Фитнес-зал', 'Конференц-зал', 'Трансфер из аэропорта',
+    'Завтрак включён', 'Кондиционер', 'Лифт', 'Круглосуточная стойка регистрации'
+];
 
-export default function EditHotelModal({ hotel, onClose, onSuccess }: EditHotelModalProps) {
+export default function EditHotelModal({hotel, onClose, onSuccess}: EditHotelModalProps) {
     const [formData, setFormData] = useState({
         name: "", city: "", address: "", description: "",
         pricePerNight: 0, stars: 3, totalRooms: 10,
-        imageUrl: "", propertyType: "Отель"
+        imageUrl: "", propertyType: "Отель",
+        hotelAmenities: ""
     });
     const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [uploading, setUploading] = useState(false);
@@ -44,7 +51,8 @@ export default function EditHotelModal({ hotel, onClose, onSuccess }: EditHotelM
                 stars: hotel.stars,
                 totalRooms: hotel.totalRooms,
                 imageUrl: hotel.imageUrl || '',
-                propertyType: hotel.propertyType || 'Отель'
+                propertyType: hotel.propertyType || 'Отель',
+                hotelAmenities: hotel.hotelAmenities || ''
             });
             setImagePreview(hotel.imageUrl || null);
             setError('');
@@ -61,9 +69,9 @@ export default function EditHotelModal({ hotel, onClose, onSuccess }: EditHotelM
         form.append("file", file);
         try {
             const res = await axios.post("/api/upload/image", form, {
-                headers: { "Content-Type": "multipart/form-data" }
+                headers: {"Content-Type": "multipart/form-data"}
             });
-            setFormData(prev => ({ ...prev, imageUrl: res.data.imageUrl }));
+            setFormData(prev => ({...prev, imageUrl: res.data.imageUrl}));
             setImagePreview(URL.createObjectURL(file));
         } catch (err: any) {
             alert(err.response?.data?.message || "Ошибка загрузки фото");
@@ -89,10 +97,13 @@ export default function EditHotelModal({ hotel, onClose, onSuccess }: EditHotelM
 
     return (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-            <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full overflow-hidden relative max-h-[90vh] overflow-y-auto">
-                <button onClick={onClose} className="absolute top-4 right-4 text-gray-500 hover:text-gray-800 z-10 bg-white rounded-full p-1 shadow-md">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            <div
+                className="bg-white rounded-xl shadow-2xl max-w-lg w-full overflow-hidden relative max-h-[90vh] overflow-y-auto">
+                <button onClick={onClose}
+                        className="absolute top-4 right-4 text-gray-500 hover:text-gray-800 z-10 bg-white rounded-full p-1 shadow-md">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                         stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/>
                     </svg>
                 </button>
 
@@ -106,7 +117,7 @@ export default function EditHotelModal({ hotel, onClose, onSuccess }: EditHotelM
                             <select
                                 className="w-full border rounded-lg p-2.5 text-sm outline-none focus:border-blue-500 bg-white"
                                 value={formData.propertyType}
-                                onChange={e => setFormData({ ...formData, propertyType: e.target.value })}
+                                onChange={e => setFormData({...formData, propertyType: e.target.value})}
                             >
                                 {PROPERTY_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                             </select>
@@ -118,13 +129,23 @@ export default function EditHotelModal({ hotel, onClose, onSuccess }: EditHotelM
                             <div className="border-2 border-dashed border-gray-300 rounded-xl overflow-hidden">
                                 {imagePreview ? (
                                     <div className="relative">
-                                        <img src={imagePreview} alt="preview" className="w-full h-48 object-cover" />
-                                        <button type="button" onClick={() => { setImagePreview(null); setFormData(p => ({ ...p, imageUrl: "" })); }} className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-7 h-7 flex items-center justify-center hover:bg-red-600">✕</button>
+                                        <img src={imagePreview} alt="preview" className="w-full h-48 object-cover"/>
+                                        <button type="button" onClick={() => {
+                                            setImagePreview(null);
+                                            setFormData(p => ({...p, imageUrl: ""}));
+                                        }}
+                                                className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-7 h-7 flex items-center justify-center hover:bg-red-600">✕
+                                        </button>
                                     </div>
                                 ) : (
-                                    <label className="flex flex-col items-center justify-center h-48 cursor-pointer hover:bg-gray-50 transition">
-                                        {uploading ? <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div> : <><span className="text-4xl mb-2">📷</span><span className="text-sm text-gray-500">Загрузить фото</span></>}
-                                        <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+                                    <label
+                                        className="flex flex-col items-center justify-center h-48 cursor-pointer hover:bg-gray-50 transition">
+                                        {uploading ? <div
+                                            className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div> : <>
+                                            <span className="text-4xl mb-2">📷</span><span
+                                            className="text-sm text-gray-500">Загрузить фото</span></>}
+                                        <input type="file" accept="image/*" className="hidden"
+                                               onChange={handleImageUpload}/>
                                     </label>
                                 )}
                             </div>
@@ -132,33 +153,53 @@ export default function EditHotelModal({ hotel, onClose, onSuccess }: EditHotelM
 
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Название</label>
-                            <input type="text" className="w-full border rounded-lg p-2.5 text-sm outline-none focus:border-blue-500" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} required />
+                            <input type="text"
+                                   className="w-full border rounded-lg p-2.5 text-sm outline-none focus:border-blue-500"
+                                   value={formData.name}
+                                   onChange={e => setFormData({...formData, name: e.target.value})} required/>
                         </div>
 
                         <div className="grid grid-cols-2 gap-3">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Город</label>
-                                <input type="text" className="w-full border rounded-lg p-2.5 text-sm outline-none focus:border-blue-500" value={formData.city} onChange={e => setFormData({ ...formData, city: e.target.value })} required />
+                                <input type="text"
+                                       className="w-full border rounded-lg p-2.5 text-sm outline-none focus:border-blue-500"
+                                       value={formData.city}
+                                       onChange={e => setFormData({...formData, city: e.target.value})} required/>
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Адрес</label>
-                                <input type="text" className="w-full border rounded-lg p-2.5 text-sm outline-none focus:border-blue-500" value={formData.address} onChange={e => setFormData({ ...formData, address: e.target.value })} />
+                                <input type="text"
+                                       className="w-full border rounded-lg p-2.5 text-sm outline-none focus:border-blue-500"
+                                       value={formData.address}
+                                       onChange={e => setFormData({...formData, address: e.target.value})}/>
                             </div>
                         </div>
 
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-1">Описание</label>
-                            <textarea className="w-full border rounded-lg p-2.5 text-sm outline-none focus:border-blue-500 h-24 resize-none" value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} />
+                            <textarea
+                                className="w-full border rounded-lg p-2.5 text-sm outline-none focus:border-blue-500 h-24 resize-none"
+                                value={formData.description}
+                                onChange={e => setFormData({...formData, description: e.target.value})}/>
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Цена за ночь (₸)</label>
-                                <input type="number" className="w-full border rounded-lg p-2.5 text-sm outline-none focus:border-blue-500" value={formData.pricePerNight} onChange={e => setFormData({ ...formData, pricePerNight: Number(e.target.value) })} required min={0} />
+                                <input type="number"
+                                       className="w-full border rounded-lg p-2.5 text-sm outline-none focus:border-blue-500"
+                                       value={formData.pricePerNight}
+                                       onChange={e => setFormData({...formData, pricePerNight: Number(e.target.value)})}
+                                       required min={0}/>
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Кол-во номеров</label>
-                                <input type="number" className="w-full border rounded-lg p-2.5 text-sm outline-none focus:border-blue-500" value={formData.totalRooms} onChange={e => setFormData({ ...formData, totalRooms: Number(e.target.value) })} required min={1} />
+                                <input type="number"
+                                       className="w-full border rounded-lg p-2.5 text-sm outline-none focus:border-blue-500"
+                                       value={formData.totalRooms}
+                                       onChange={e => setFormData({...formData, totalRooms: Number(e.target.value)})}
+                                       required min={1}/>
                             </div>
                         </div>
 
@@ -167,19 +208,58 @@ export default function EditHotelModal({ hotel, onClose, onSuccess }: EditHotelM
                                 <label className="block text-sm font-medium text-gray-700 mb-2">Звёзды</label>
                                 <div className="flex gap-2">
                                     {[1, 2, 3, 4, 5].map(star => (
-                                        <button key={star} type="button" onClick={() => setFormData({ ...formData, stars: star })} className={`text-2xl transition ${star <= formData.stars ? 'text-yellow-400' : 'text-gray-300'}`}>★</button>
+                                        <button key={star} type="button"
+                                                onClick={() => setFormData({...formData, stars: star})}
+                                                className={`text-2xl transition ${star <= formData.stars ? 'text-yellow-400' : 'text-gray-300'}`}>★</button>
                                     ))}
                                 </div>
                             </div>
                         )}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                Удобства отеля
+                            </label>
+                            <div className="flex flex-wrap gap-2">
+                                {HOTEL_AMENITIES.map(amenity => {
+                                    const selected = formData.hotelAmenities
+                                        .split(',').map(a => a.trim()).includes(amenity);
+                                    return (
+                                        <button
+                                            key={amenity}
+                                            type="button"
+                                            onClick={() => {
+                                                const current = formData.hotelAmenities
+                                                    ? formData.hotelAmenities.split(',').map(a => a.trim()).filter(Boolean)
+                                                    : [];
+                                                const updated = selected
+                                                    ? current.filter(a => a !== amenity)
+                                                    : [...current, amenity];
+                                                setFormData({ ...formData, hotelAmenities: updated.join(', ') });
+                                            }}
+                                            className={`text-xs px-3 py-1.5 rounded-full border transition ${
+                                                selected
+                                                    ? 'bg-blue-600 text-white border-blue-600'
+                                                    : 'border-gray-300 hover:border-blue-400 text-gray-600'
+                                            }`}
+                                        >
+                                            {amenity}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
 
-                        {error && <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-lg p-3">{error}</div>}
+                        {error && <div
+                            className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-lg p-3">{error}</div>}
 
                         <div className="flex gap-3 pt-2">
-                            <button type="submit" disabled={loading || uploading} className="flex-1 bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 transition disabled:opacity-50">
+                            <button type="submit" disabled={loading || uploading}
+                                    className="flex-1 bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 transition disabled:opacity-50">
                                 {loading ? 'Сохраняем...' : 'Сохранить'}
                             </button>
-                            <button type="button" onClick={onClose} className="px-6 py-3 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition">Отмена</button>
+                            <button type="button" onClick={onClose}
+                                    className="px-6 py-3 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition">Отмена
+                            </button>
                         </div>
                     </form>
                 </div>

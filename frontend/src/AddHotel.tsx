@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+﻿import {useState} from "react";
 import axios from "axios";
 
 interface AddHotelProps {
@@ -7,14 +7,14 @@ interface AddHotelProps {
 }
 
 const PROPERTY_TYPES = [
-    { value: 'Отель', label: '🏨 Отель', desc: 'Гостиница с номерным фондом' },
-    { value: 'Апартаменты', label: '🏢 Апартаменты', desc: 'Квартира посуточно' },
-    { value: 'Хостел', label: '🛏 Хостел', desc: 'Бюджетное размещение' },
-    { value: 'Гостевой дом', label: '🏠 Гостевой дом', desc: 'Частный дом для гостей' },
-    { value: 'Вилла', label: '🌴 Вилла', desc: 'Отдельная вилла или коттедж' },
+    {value: 'Отель', label: '🏨 Отель', desc: 'Гостиница с номерным фондом'},
+    {value: 'Апартаменты', label: '🏢 Апартаменты', desc: 'Квартира посуточно'},
+    {value: 'Хостел', label: '🛏 Хостел', desc: 'Бюджетное размещение'},
+    {value: 'Гостевой дом', label: '🏠 Гостевой дом', desc: 'Частный дом для гостей'},
+    {value: 'Вилла', label: '🌴 Вилла', desc: 'Отдельная вилла или коттедж'},
 ];
 
-export default function AddHotel({ onSuccess, ownerEmail }: AddHotelProps) {
+export default function AddHotel({onSuccess, ownerEmail}: AddHotelProps) {
     const [step, setStep] = useState<'type' | 'details'>('type');
     const [formData, setFormData] = useState({
         name: "",
@@ -23,13 +23,17 @@ export default function AddHotel({ onSuccess, ownerEmail }: AddHotelProps) {
         description: "",
         pricePerNight: 0,
         stars: 3,
-        totalRooms: 10,
         imageUrl: "",
-        propertyType: ""
+        propertyType: "",
+        hotelAmenities: ""
     });
     const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [uploading, setUploading] = useState(false);
-
+    const HOTEL_AMENITIES = [
+        'Бесплатный Wi-Fi', 'Парковка', 'Бассейн', 'Ресторан',
+        'Спа', 'Фитнес-зал', 'Конференц-зал', 'Трансфер из аэропорта',
+        'Завтрак включён', 'Кондиционер', 'Лифт', 'Круглосуточная стойка регистрации'
+    ];
     const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -38,9 +42,9 @@ export default function AddHotel({ onSuccess, ownerEmail }: AddHotelProps) {
         form.append("file", file);
         try {
             const res = await axios.post("/api/upload/image", form, {
-                headers: { "Content-Type": "multipart/form-data" }
+                headers: {"Content-Type": "multipart/form-data"}
             });
-            setFormData(prev => ({ ...prev, imageUrl: res.data.imageUrl }));
+            setFormData(prev => ({...prev, imageUrl: res.data.imageUrl}));
             setImagePreview(URL.createObjectURL(file));
         } catch (err: any) {
             alert(err.response?.data?.message || "Ошибка загрузки фото");
@@ -75,7 +79,7 @@ export default function AddHotel({ onSuccess, ownerEmail }: AddHotelProps) {
                         <button
                             key={type.value}
                             onClick={() => {
-                                setFormData(prev => ({ ...prev, propertyType: type.value }));
+                                setFormData(prev => ({...prev, propertyType: type.value}));
                                 setStep('details');
                             }}
                             className="bg-white border-2 border-gray-200 hover:border-blue-500 hover:bg-blue-50 rounded-xl p-6 text-left transition group"
@@ -117,17 +121,23 @@ export default function AddHotel({ onSuccess, ownerEmail }: AddHotelProps) {
                     <div className="border-2 border-dashed border-gray-300 rounded-xl overflow-hidden">
                         {imagePreview ? (
                             <div className="relative">
-                                <img src={imagePreview} alt="preview" className="w-full h-48 object-cover" />
+                                <img src={imagePreview} alt="preview" className="w-full h-48 object-cover"/>
                                 <button
                                     type="button"
-                                    onClick={() => { setImagePreview(null); setFormData(p => ({ ...p, imageUrl: "" })); }}
+                                    onClick={() => {
+                                        setImagePreview(null);
+                                        setFormData(p => ({...p, imageUrl: ""}));
+                                    }}
                                     className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-7 h-7 flex items-center justify-center hover:bg-red-600"
-                                >✕</button>
+                                >✕
+                                </button>
                             </div>
                         ) : (
-                            <label className="flex flex-col items-center justify-center h-48 cursor-pointer hover:bg-gray-50 transition">
+                            <label
+                                className="flex flex-col items-center justify-center h-48 cursor-pointer hover:bg-gray-50 transition">
                                 {uploading ? (
-                                    <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                                    <div
+                                        className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
                                 ) : (
                                     <>
                                         <span className="text-4xl mb-2">📷</span>
@@ -135,7 +145,7 @@ export default function AddHotel({ onSuccess, ownerEmail }: AddHotelProps) {
                                         <span className="text-xs text-gray-400 mt-1">JPG, PNG, WEBP до 5MB</span>
                                     </>
                                 )}
-                                <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+                                <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload}/>
                             </label>
                         )}
                     </div>
@@ -150,7 +160,7 @@ export default function AddHotel({ onSuccess, ownerEmail }: AddHotelProps) {
                         placeholder={formData.propertyType === 'Апартаменты' ? 'Например: Уютная 2-комнатная квартира' : 'Название'}
                         className="w-full border rounded-lg p-2.5 text-sm outline-none focus:border-blue-500"
                         value={formData.name}
-                        onChange={e => setFormData({ ...formData, name: e.target.value })}
+                        onChange={e => setFormData({...formData, name: e.target.value})}
                         required
                     />
                 </div>
@@ -162,7 +172,7 @@ export default function AddHotel({ onSuccess, ownerEmail }: AddHotelProps) {
                             type="text"
                             className="w-full border rounded-lg p-2.5 text-sm outline-none focus:border-blue-500"
                             value={formData.city}
-                            onChange={e => setFormData({ ...formData, city: e.target.value })}
+                            onChange={e => setFormData({...formData, city: e.target.value})}
                             required
                         />
                     </div>
@@ -173,7 +183,7 @@ export default function AddHotel({ onSuccess, ownerEmail }: AddHotelProps) {
                             placeholder="ул. Байтурсынова, 15"
                             className="w-full border rounded-lg p-2.5 text-sm outline-none focus:border-blue-500"
                             value={formData.address}
-                            onChange={e => setFormData({ ...formData, address: e.target.value })}
+                            onChange={e => setFormData({...formData, address: e.target.value})}
                         />
                     </div>
                 </div>
@@ -184,7 +194,7 @@ export default function AddHotel({ onSuccess, ownerEmail }: AddHotelProps) {
                         className="w-full border rounded-lg p-2.5 text-sm outline-none focus:border-blue-500 h-24 resize-none"
                         placeholder="Расскажите об объекте..."
                         value={formData.description}
-                        onChange={e => setFormData({ ...formData, description: e.target.value })}
+                        onChange={e => setFormData({...formData, description: e.target.value})}
                         required
                     />
                 </div>
@@ -196,7 +206,7 @@ export default function AddHotel({ onSuccess, ownerEmail }: AddHotelProps) {
                             type="number"
                             className="w-full border rounded-lg p-2.5 text-sm outline-none focus:border-blue-500"
                             value={formData.pricePerNight}
-                            onChange={e => setFormData({ ...formData, pricePerNight: Number(e.target.value) })}
+                            onChange={e => setFormData({...formData, pricePerNight: Number(e.target.value)})}
                             required
                             min={0}
                         />
@@ -209,7 +219,7 @@ export default function AddHotel({ onSuccess, ownerEmail }: AddHotelProps) {
                             type="number"
                             className="w-full border rounded-lg p-2.5 text-sm outline-none focus:border-blue-500"
                             value={formData.totalRooms}
-                            onChange={e => setFormData({ ...formData, totalRooms: Number(e.target.value) })}
+                            onChange={e => setFormData({...formData, totalRooms: Number(e.target.value)})}
                             required
                             min={1}
                         />
@@ -225,7 +235,7 @@ export default function AddHotel({ onSuccess, ownerEmail }: AddHotelProps) {
                                 <button
                                     key={star}
                                     type="button"
-                                    onClick={() => setFormData({ ...formData, stars: star })}
+                                    onClick={() => setFormData({...formData, stars: star})}
                                     className={`text-2xl transition ${star <= formData.stars ? 'text-yellow-400' : 'text-gray-300'}`}
                                 >★</button>
                             ))}
@@ -238,6 +248,40 @@ export default function AddHotel({ onSuccess, ownerEmail }: AddHotelProps) {
                     <p>💡 После создания объекта вы сможете добавить типы номеров в панели владельца</p>
                 </div>
 
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Удобства
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                        {HOTEL_AMENITIES.map(amenity => {
+                            const selected = formData.hotelAmenities
+                                .split(',').map(a => a.trim()).includes(amenity);
+                            return (
+                                <button
+                                    key={amenity}
+                                    type="button"
+                                    onClick={() => {
+                                        const current = formData.hotelAmenities
+                                            ? formData.hotelAmenities.split(',').map(a => a.trim()).filter(Boolean)
+                                            : [];
+                                        const updated = selected
+                                            ? current.filter(a => a !== amenity)
+                                            : [...current, amenity];
+                                        setFormData({ ...formData, hotelAmenities: updated.join(', ') });
+                                    }}
+                                    className={`text-xs px-3 py-1.5 rounded-full border transition ${
+                                        selected
+                                            ? 'bg-blue-600 text-white border-blue-600'
+                                            : 'border-gray-300 hover:border-blue-400 text-gray-600'
+                                    }`}
+                                >
+                                    {amenity}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+                
                 <button
                     type="submit"
                     disabled={uploading}

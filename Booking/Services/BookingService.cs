@@ -15,87 +15,88 @@ public class BookingService : IBookingService
     }
 
     public async Task<BookingDto> CreateAsync(CreateBookingDto dto, string userId)
+{
+    var hotel = await _context.Hotels
+        .Include(h => h.RoomTypes)  // добавили
+        .FirstOrDefaultAsync(h => h.Id == dto.HotelId);
+    if (hotel == null) throw new Exception("Отель не найден");
+
+    var nights = (dto.CheckOut - dto.CheckIn).Days;
+    if (nights <= 0) throw new Exception("Дата выезда должна быть позже даты заезда");
+
+    decimal pricePerNight = hotel.PricePerNight;
+    string? roomTypeName = null;
+    int totalAvailableRooms = hotel.RoomTypes.Sum(rt => rt.TotalRooms);
+
+    if (dto.RoomTypeId.HasValue)
     {
-        var hotel = await _context.Hotels.FindAsync(dto.HotelId);
-        if (hotel == null) throw new Exception("Отель не найден");
+        var roomType = await _context.RoomTypes.FindAsync(dto.RoomTypeId.Value);
+        if (roomType == null) throw new Exception("Тип номера не найден");
 
-        var nights = (dto.CheckOut - dto.CheckIn).Days;
-        if (nights <= 0) throw new Exception("Дата выезда должна быть позже даты заезда");
+        pricePerNight = roomType.PricePerNight;
+        roomTypeName = roomType.Name;
+        totalAvailableRooms = roomType.TotalRooms;
 
-        decimal pricePerNight = hotel.PricePerNight;
-        string? roomTypeName = null;
-        int totalAvailableRooms = hotel.TotalRooms;
+        var bookedRooms = await _context.Bookings
+            .Where(b =>
+                b.RoomTypeId == dto.RoomTypeId &&
+                b.Status == "Active" &&
+                b.CheckIn < dto.CheckOut &&
+                b.CheckOut > dto.CheckIn)
+            .SumAsync(b => b.Rooms);
 
-        // Если выбран тип номера — проверяем его доступность
-        if (dto.RoomTypeId.HasValue)
-        {
-            var roomType = await _context.RoomTypes.FindAsync(dto.RoomTypeId.Value);
-            if (roomType == null) throw new Exception("Тип номера не найден");
-
-            pricePerNight = roomType.PricePerNight;
-            roomTypeName = roomType.Name;
-            totalAvailableRooms = roomType.TotalRooms;
-
-            var bookedRooms = await _context.Bookings
-                .Where(b =>
-                    b.RoomTypeId == dto.RoomTypeId &&
-                    b.Status == "Active" &&
-                    b.CheckIn < dto.CheckOut &&
-                    b.CheckOut > dto.CheckIn)
-                .SumAsync(b => b.Rooms);
-
-            if (bookedRooms + dto.Rooms > totalAvailableRooms)
-                throw new Exception($"Недостаточно свободных номеров. Доступно: {totalAvailableRooms - bookedRooms}");
-        }
-        else
-        {
-            // Общая проверка без типа номера
-            var bookedRooms = await _context.Bookings
-                .Where(b =>
-                    b.HotelId == dto.HotelId &&
-                    b.RoomTypeId == null &&
-                    b.Status == "Active" &&
-                    b.CheckIn < dto.CheckOut &&
-                    b.CheckOut > dto.CheckIn)
-                .SumAsync(b => b.Rooms);
-
-            if (bookedRooms + dto.Rooms > hotel.TotalRooms)
-                throw new Exception($"Свободных номеров нет. Все {hotel.TotalRooms} заняты на эти даты");
-        }
-
-        var booking = new Models.Booking
-        {
-            HotelId = dto.HotelId,
-            RoomTypeId = dto.RoomTypeId,
-            UserId = userId,
-            CheckIn = dto.CheckIn,
-            CheckOut = dto.CheckOut,
-            Guests = dto.Guests,
-            Rooms = dto.Rooms,
-            TotalPrice = pricePerNight * nights * dto.Rooms,
-            Status = "Active"
-        };
-
-        _context.Bookings.Add(booking);
-        await _context.SaveChangesAsync();
-
-        return new BookingDto
-        {
-            Id = booking.Id,
-            HotelId = hotel.Id,
-            HotelName = hotel.Name,
-            City = hotel.City,
-            RoomTypeId = booking.RoomTypeId,
-            RoomTypeName = roomTypeName,
-            CheckIn = booking.CheckIn,
-            CheckOut = booking.CheckOut,
-            Guests = booking.Guests,
-            Rooms = booking.Rooms,
-            TotalPrice = booking.TotalPrice,
-            Status = booking.Status,
-            CreatedAt = booking.CreatedAt
-        };
+        if (bookedRooms + dto.Rooms > totalAvailableRooms)
+            throw new Exception($"Недостаточно свободных номеров. Доступно: {totalAvailableRooms - bookedRooms}");
     }
+    else
+    {
+        var totalRooms = hotel.RoomTypes.Sum(rt => rt.TotalRooms);
+        var bookedRooms = await _context.Bookings
+            .Where(b =>
+                b.HotelId == dto.HotelId &&
+                b.RoomTypeId == null &&
+                b.Status == "Active" &&
+                b.CheckIn < dto.CheckOut &&
+                b.CheckOut > dto.CheckIn)
+            .SumAsync(b => b.Rooms);
+
+        if (bookedRooms + dto.Rooms > totalRooms)
+            throw new Exception($"Свободных номеров нет. Все {totalRooms} заняты на эти даты");
+    }
+
+    var booking = new Models.Booking
+    {
+        HotelId = dto.HotelId,
+        RoomTypeId = dto.RoomTypeId,
+        UserId = userId,
+        CheckIn = dto.CheckIn,
+        CheckOut = dto.CheckOut,
+        Guests = dto.Guests,
+        Rooms = dto.Rooms,
+        TotalPrice = pricePerNight * nights * dto.Rooms,
+        Status = "Active"
+    };
+
+    _context.Bookings.Add(booking);
+    await _context.SaveChangesAsync();
+
+    return new BookingDto
+    {
+        Id = booking.Id,
+        HotelId = hotel.Id,
+        HotelName = hotel.Name,
+        City = hotel.City,
+        RoomTypeId = booking.RoomTypeId,
+        RoomTypeName = roomTypeName,
+        CheckIn = booking.CheckIn,
+        CheckOut = booking.CheckOut,
+        Guests = booking.Guests,
+        Rooms = booking.Rooms,
+        TotalPrice = booking.TotalPrice,
+        Status = booking.Status,
+        CreatedAt = booking.CreatedAt
+    };
+}
 
     public async Task<IEnumerable<BookingDto>> GetMyBookingsAsync(string userId)
     {

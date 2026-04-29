@@ -14,9 +14,22 @@ public class HotelService : IHotelService
         _context = context;
     }
 
-    public async Task<(IEnumerable<HotelDto> Hotels, int TotalCount)> GetAllAsync(string? city, decimal? maxPrice, int? stars, int page, int pageSize, string? sortBy)
+    public async Task<HotelDto?> GetByIdAsync(int id)
     {
-        var query = _context.Hotels.AsQueryable();
+        var h = await _context.Hotels
+            .Include(h => h.RoomTypes)
+            .FirstOrDefaultAsync(h => h.Id == id);
+        return h == null ? null : MapToDto(h);
+    }
+
+    public async Task<(IEnumerable<HotelDto> Hotels, int TotalCount)> GetAllAsync(
+        string? city, decimal? maxPrice, int? stars,
+        DateTime? checkIn, DateTime? checkOut, int? guests, int? roomsCount,
+        int page, int pageSize, string? sortBy)
+    {
+        var query = _context.Hotels
+            .Include(h => h.RoomTypes)
+            .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(city))
             query = query.Where(h => h.City.ToLower().Contains(city.ToLower()));
@@ -24,6 +37,26 @@ public class HotelService : IHotelService
             query = query.Where(h => h.PricePerNight <= maxPrice.Value);
         if (stars.HasValue)
             query = query.Where(h => h.Stars == stars.Value);
+
+        if (checkIn.HasValue && checkOut.HasValue)
+        {
+            var checkInUtc = DateTime.SpecifyKind(checkIn.Value, DateTimeKind.Utc);
+            var checkOutUtc = DateTime.SpecifyKind(checkOut.Value, DateTimeKind.Utc);
+            int reqRooms = roomsCount ?? 1;
+            int reqGuests = guests ?? 1;
+
+            query = query.Where(hotel => _context.RoomTypes.Any(rt =>
+                rt.HotelId == hotel.Id &&
+                (rt.MaxGuests * reqRooms >= reqGuests) &&
+                (rt.TotalRooms - _context.Bookings
+                    .Where(b =>
+                        b.RoomTypeId == rt.Id &&
+                        b.Status == "Active" &&
+                        b.CheckIn < checkOutUtc &&
+                        b.CheckOut > checkInUtc)
+                    .Sum(b => (int?)b.Rooms ?? 0) >= reqRooms)
+            ));
+        }
 
         query = sortBy switch
         {
@@ -35,69 +68,73 @@ public class HotelService : IHotelService
         };
 
         var totalCount = await query.CountAsync();
-
         var hotels = await query
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
-            .Select(h => new HotelDto {
-                Id = h.Id,
-                Name = h.Name,
-                City = h.City,
-                Description = h.Description,
-                PricePerNight = h.PricePerNight,
-                Stars = h.Stars,
-                TotalRooms = h.TotalRooms,
-                ImageUrl = h.ImageUrl 
-            }).ToListAsync();
+            .ToListAsync();
 
-        return (hotels, totalCount);
+        return (hotels.Select(MapToDto), totalCount);
     }
 
     public async Task<HotelDto> CreateAsync(HotelDto dto, string ownerId)
     {
-        var hotel = new Hotel {
+        var hotel = new Hotel
+        {
             Name = dto.Name,
             City = dto.City,
+            Address = dto.Address,
             Description = dto.Description,
             PricePerNight = dto.PricePerNight,
-            OwnerId = ownerId,
             Stars = dto.Stars,
-            TotalRooms = dto.TotalRooms,
-            ImageUrl = dto.ImageUrl
+            ImageUrl = dto.ImageUrl,
+            PropertyType = dto.PropertyType,
+            HotelAmenities = dto.HotelAmenities,
+            OwnerId = ownerId
         };
 
         _context.Hotels.Add(hotel);
         await _context.SaveChangesAsync();
 
         dto.Id = hotel.Id;
+        dto.TotalRooms = 0;
         return dto;
     }
-    
+
     public async Task<HotelDto?> UpdateAsync(int id, HotelDto dto, string ownerId)
     {
-        var hotel = await _context.Hotels.FindAsync(id);
+        var hotel = await _context.Hotels
+            .Include(h => h.RoomTypes)
+            .FirstOrDefaultAsync(h => h.Id == id);
+
         if (hotel == null || hotel.OwnerId != ownerId) return null;
 
         hotel.Name = dto.Name;
         hotel.City = dto.City;
+        hotel.Address = dto.Address;
         hotel.Description = dto.Description;
         hotel.PricePerNight = dto.PricePerNight;
         hotel.Stars = dto.Stars;
-        hotel.TotalRooms = dto.TotalRooms;
+        hotel.PropertyType = dto.PropertyType;
+        hotel.HotelAmenities = dto.HotelAmenities;
         if (!string.IsNullOrEmpty(dto.ImageUrl))
             hotel.ImageUrl = dto.ImageUrl;
 
         await _context.SaveChangesAsync();
-
-        return new HotelDto {
-            Id = hotel.Id,
-            Name = hotel.Name,
-            City = hotel.City,
-            Description = hotel.Description,
-            PricePerNight = hotel.PricePerNight,
-            Stars = hotel.Stars,
-            TotalRooms = hotel.TotalRooms,
-            ImageUrl = hotel.ImageUrl
-        };
+        return MapToDto(hotel);
     }
+
+    private static HotelDto MapToDto(Hotel h) => new HotelDto
+    {
+        Id = h.Id,
+        Name = h.Name,
+        City = h.City,
+        Address = h.Address,
+        Description = h.Description,
+        PricePerNight = h.PricePerNight,
+        Stars = h.Stars,
+        ImageUrl = h.ImageUrl,
+        PropertyType = h.PropertyType,
+        HotelAmenities = h.HotelAmenities,
+        TotalRooms = h.RoomTypes?.Sum(rt => rt.TotalRooms) ?? 0
+    };
 }

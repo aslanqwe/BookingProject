@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import {useEffect, useState, useRef} from 'react';
 import axios from 'axios';
 
 interface RoomType {
@@ -25,6 +25,7 @@ interface Hotel {
     totalRooms: number;
     imageUrl?: string;
     propertyType: string;
+    hotelAmenities?: string;
 }
 
 interface HotelPageProps {
@@ -52,20 +53,15 @@ export default function HotelPage({
                                       onBack,
                                       onBookingSuccess
                                   }: HotelPageProps) {
-    // Основные состояния данных
     const [roomTypes, setRoomTypes] = useState<RoomType[]>([]);
     const [loadingRooms, setLoadingRooms] = useState(true);
     const [checkIn, setCheckIn] = useState(initialCheckIn);
     const [checkOut, setCheckOut] = useState(initialCheckOut);
     const [guests, setGuests] = useState(initialGuests);
-
-    // Состояния бронирования
     const [bookingState, setBookingState] = useState<BookingState | null>(null);
     const [bookingLoading, setBookingLoading] = useState(false);
     const [bookingError, setBookingError] = useState('');
     const [bookingSuccess, setBookingSuccess] = useState(false);
-
-    // Состояния для выпадающего меню гостей
     const [isGuestMenuOpen, setIsGuestMenuOpen] = useState(false);
     const [options, setOptions] = useState({
         adults: initialGuests || 2,
@@ -75,7 +71,6 @@ export default function HotelPage({
 
     const menuRef = useRef<HTMLDivElement>(null);
 
-    // Закрытие меню при клике вне его области
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
@@ -88,9 +83,12 @@ export default function HotelPage({
 
     const handleOption = (name: 'adults' | 'children' | 'rooms', operation: 'i' | 'd') => {
         setOptions((prev) => {
-            const newValue = operation === 'i' ? prev[name] + 1 : prev[name] - 1;
-            const updated = { ...prev, [name]: newValue };
-            // Синхронизируем общее кол-во гостей (взрослые + дети)
+            const minValues = {adults: 1, children: 0, rooms: 1};
+            const newValue = Math.max(
+                minValues[name],
+                operation === 'i' ? prev[name] + 1 : prev[name] - 1
+            );
+            const updated = {...prev, [name]: newValue};
             setGuests(updated.adults + updated.children);
             return updated;
         });
@@ -102,7 +100,7 @@ export default function HotelPage({
         if (ci) params.checkIn = new Date(ci).toISOString();
         if (co) params.checkOut = new Date(co).toISOString();
 
-        axios.get(`/api/hotels/${hotel.id}/roomtypes`, { params })
+        axios.get(`/api/hotels/${hotel.id}/roomtypes`, {params})
             .then(res => setRoomTypes(res.data))
             .catch(err => console.error(err))
             .finally(() => setLoadingRooms(false));
@@ -138,10 +136,8 @@ export default function HotelPage({
             setBookingError('Выберите даты заезда и выезда');
             return;
         }
-
         setBookingLoading(true);
         setBookingError('');
-
         try {
             await axios.post('/api/bookings', {
                 hotelId: hotel.id,
@@ -165,17 +161,32 @@ export default function HotelPage({
     };
 
     const scrollToRooms = () => {
-        document.getElementById('availability-section')?.scrollIntoView({ behavior: 'smooth' });
+        document.getElementById('availability-section')?.scrollIntoView({behavior: 'smooth'});
     };
 
     const amenityIcons: Record<string, string> = {
-        'Wi-Fi': '📶', 'Кондиционер': '❄️', 'ТВ': '📺',
-        'Холодильник': '🧊', 'Ванная': '🛁', 'Душ': '🚿',
-        'Балкон': '🌿', 'Сейф': '🔒', 'Фен': '💨',
-        'Мини-бар': '🍷', 'Завтрак включён': '🍳', 'Парковка': '🅿️'
+        'Wi-Fi': '📶', 'WiFi': '📶', 'Завтрак': '🍳',
+        'Кондиционер': '❄️', 'Парковка': '🚗', 'Телевизор': '📺',
+        'Бассейн': '🏊', 'Кухня': '🍳', 'Фен': '💨',
+        'Вид на город': '🏙️', 'Рабочая зона': '💻', 'Кофемашина': '☕',
+        'Ванная': '🛁', 'Душ': '🚿', 'Балкон': '🌿',
+        'Сейф': '🔒', 'Мини-бар': '🍷', 'Холодильник': '🧊',
+        'ТВ': '📺', 'Завтрак включён': '🍳',
+    };
+
+    const hotelAmenityIcons: Record<string, string> = {
+        'Бесплатный Wi-Fi': '📶', 'Парковка': '🅿️', 'Бассейн': '🏊',
+        'Ресторан': '🍽️', 'Спа': '💆', 'Фитнес-зал': '💪',
+        'Конференц-зал': '📊', 'Трансфер из аэропорта': '✈️',
+        'Завтрак включён': '🍳', 'Кондиционер': '❄️',
+        'Лифт': '🛗', 'Круглосуточная стойка регистрации': '🕐'
     };
 
     const totalPrice = bookingState ? bookingState.pricePerNight * nights * bookingState.rooms : 0;
+
+    const allUnavailable = roomTypes.length > 0 &&
+        roomTypes.every(r => r.availableRooms <= 0) &&
+        checkIn && checkOut;
 
     return (
         <div className="min-h-screen bg-gray-50 pb-12">
@@ -208,7 +219,10 @@ export default function HotelPage({
                             📍 {hotel.address ? `${hotel.address}, ` : ''}{hotel.city} — Отличное расположение
                         </p>
                     </div>
-                    <button onClick={scrollToRooms} className="bg-[#0071c2] hover:bg-[#005999] text-white font-bold px-6 py-2 rounded shadow-sm">
+                    <button
+                        onClick={scrollToRooms}
+                        className="bg-[#0071c2] hover:bg-[#005999] text-white font-bold px-6 py-2 rounded shadow-sm"
+                    >
                         Забронировать
                     </button>
                 </div>
@@ -216,124 +230,209 @@ export default function HotelPage({
                 {/* 2. Галерея */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-2 h-96 mb-8 rounded-xl overflow-hidden">
                     <div className="md:col-span-2 h-full bg-gray-200 overflow-hidden">
-                        <img src={hotel.imageUrl || 'https://via.placeholder.com/800x400?text=No+Image'} alt={hotel.name} className="w-full h-full object-cover" />
+                        <img
+                            src={hotel.imageUrl || 'https://placehold.co/800x400?text=Нет+Фото'}
+                            alt={hotel.name}
+                            className="w-full h-full object-cover"
+                        />
                     </div>
                     <div className="hidden md:flex flex-col gap-2 h-full">
-                        <div className="h-1/2 bg-gray-200 overflow-hidden">
-                            <img src={hotel.imageUrl || ''} className="w-full h-full object-cover" alt="" />
+                        <div className="h-1/2 bg-gray-100 overflow-hidden rounded-tr-xl">
+                            {hotel.imageUrl ? (
+                                <img src={hotel.imageUrl} alt={`${hotel.name} - вид 1`} className="w-full h-full object-cover hover:opacity-90 transition-opacity" />
+                            ) : (
+                                <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs bg-gray-200">Нет Фото</div>
+                            )}
                         </div>
-                        <div className="h-1/2 bg-gray-200 relative overflow-hidden group cursor-pointer">
-                            <img src={hotel.imageUrl || ''} className="w-full h-full object-cover" alt="" />
-                            <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
-                                <span className="text-white font-bold text-sm bg-black/50 px-4 py-2 rounded-lg">Больше фото</span>
+                        <div className="h-1/2 bg-gray-100 relative overflow-hidden group cursor-pointer rounded-br-xl">
+                            {hotel.imageUrl ? (
+                                <img src={hotel.imageUrl} alt={`${hotel.name} - вид 2`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                            ) : (
+                                <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs bg-gray-200">Нет Фото</div>
+                            )}
+                            <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 flex items-center justify-center transition-colors">
+                                <span className="text-white font-bold text-xs bg-black/50 px-3 py-1.5 rounded-lg backdrop-blur-sm">
+                                    Смотреть все фото
+                                </span>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                {/* 3. Описание */}
+                {/* 3. Описание + Преимущества */}
                 <div className="flex flex-col lg:flex-row gap-8 mb-10">
                     <div className="flex-1">
                         <p className="text-gray-700 leading-relaxed whitespace-pre-line">
                             {hotel.description || 'Описание отсутствует.'}
                         </p>
                     </div>
-                    <div className="lg:w-80 shrink-0">
-                        <div className="bg-blue-50 p-5 rounded-xl border border-blue-100">
-                            <h3 className="font-bold text-gray-900 mb-3 text-lg">Преимущества</h3>
-                            <ul className="text-sm text-gray-700 flex flex-col gap-3 mb-5">
-                                <li>📍 Отличное расположение</li>
-                                <li>🅿️ Бесплатная парковка</li>
+                    <div className="lg:w-72 shrink-0 bg-blue-50 p-5 rounded-xl border border-blue-100 self-start">
+                        <h3 className="font-bold text-gray-900 mb-3 text-lg">Преимущества</h3>
+                        {hotel.hotelAmenities ? (
+                            <ul className="text-sm text-gray-700 flex flex-col gap-2 mb-5">
+                                {hotel.hotelAmenities.split(',').map(a => a.trim()).filter(Boolean).map(amenity => (
+                                    <li key={amenity}>
+                                        {hotelAmenityIcons[amenity] || '✓'} {amenity}
+                                    </li>
+                                ))}
                             </ul>
-                            <button onClick={scrollToRooms} className="w-full bg-[#0071c2] text-white font-bold py-2.5 rounded">
-                                Показать номера
-                            </button>
-                        </div>
+                        ) : (
+                            <p className="text-sm text-gray-400 mb-5">Владелец не указал удобства</p>
+                        )}
+                        <button
+                            onClick={scrollToRooms}
+                            className="w-full bg-[#0071c2] text-white font-bold py-2.5 rounded hover:bg-[#005999] transition"
+                        >
+                            Показать номера
+                        </button>
                     </div>
                 </div>
 
-                {/* 4. Блок наличия мест */}
+                {/* 4. Наличие мест */}
                 <div id="availability-section" className="scroll-mt-24">
                     <h2 className="text-2xl font-bold text-gray-900 mb-4">Наличие мест</h2>
 
+                    {/* Строка поиска */}
                     <div className="bg-[#febb02] p-1 rounded-lg mb-6 relative z-20">
                         <div className="bg-white rounded-md flex flex-col md:flex-row">
-                            {/* Заезд */}
                             <div className="flex items-center gap-2 px-4 py-3 border-r border-gray-200 flex-1">
-                                <input className="outline-none text-sm w-full" type="date" value={checkIn} onChange={(e) => setCheckIn(e.target.value)} />
+                                <div>
+                                    <p className="text-xs text-gray-400">Заезд</p>
+                                    <input
+                                        className="outline-none text-sm w-full"
+                                        type="date"
+                                        value={checkIn}
+                                        min={new Date().toISOString().split('T')[0]}
+                                        onChange={(e) => {
+                                            setCheckIn(e.target.value);
+                                            if (checkOut && e.target.value > checkOut) setCheckOut('');
+                                        }}
+                                    />
+                                </div>
                             </div>
-                            {/* Выезд */}
                             <div className="flex items-center gap-2 px-4 py-3 border-r border-gray-200 flex-1">
-                                <input className="outline-none text-sm w-full" type="date" value={checkOut} onChange={(e) => setCheckOut(e.target.value)} />
+                                <div>
+                                    <p className="text-xs text-gray-400">Выезд</p>
+                                    <input
+                                        className="outline-none text-sm w-full"
+                                        type="date"
+                                        value={checkOut}
+                                        min={checkIn || new Date().toISOString().split('T')[0]}
+                                        onChange={(e) => setCheckOut(e.target.value)}
+                                    />
+                                </div>
                             </div>
-                            {/* Гости */}
-                            <div ref={menuRef} className="relative flex items-center gap-2 px-4 py-3 border-r border-gray-200 cursor-pointer flex-1" onClick={() => setIsGuestMenuOpen(!isGuestMenuOpen)}>
-                                <span className="text-sm text-gray-700 truncate">
-                                    {options.adults} взр · {options.children} дет · {options.rooms} ном
-                                </span>
+                            <div
+                                ref={menuRef}
+                                className="relative flex items-center gap-2 px-4 py-3 border-r border-gray-200 cursor-pointer flex-1"
+                                onClick={() => setIsGuestMenuOpen(!isGuestMenuOpen)}
+                            >
+                                <div>
+                                    <p className="text-xs text-gray-400">Гости и номера</p>
+                                    <span className="text-sm text-gray-700 truncate">
+                                        {options.adults} взр · {options.children} дет · {options.rooms} ном
+                                    </span>
+                                </div>
                                 {isGuestMenuOpen && (
-                                    <div className="absolute top-full left-0 mt-2 w-72 bg-white shadow-xl border rounded-lg p-4 z-50" onClick={e => e.stopPropagation()}>
-                                        <div className="flex justify-between items-center mb-4">
-                                            <span className="text-sm font-medium">Взрослые</span>
-                                            <div className="flex items-center gap-3">
-                                                <button disabled={options.adults <= 1} onClick={() => handleOption('adults', 'd')} className="w-8 h-8 border rounded">-</button>
-                                                <span>{options.adults}</span>
-                                                <button onClick={() => handleOption('adults', 'i')} className="w-8 h-8 border rounded">+</button>
+                                    <div
+                                        className="absolute top-full left-0 mt-2 w-72 bg-white shadow-xl border rounded-lg p-4 z-50"
+                                        onClick={e => e.stopPropagation()}
+                                    >
+                                        {(['adults', 'children', 'rooms'] as const).map((key) => (
+                                            <div key={key} className="flex justify-between items-center mb-4 last:mb-0">
+                                                <span className="text-sm font-medium">
+                                                    {key === 'adults' ? 'Взрослые' : key === 'children' ? 'Дети' : 'Номера'}
+                                                </span>
+                                                <div className="flex items-center gap-3">
+                                                    <button
+                                                        disabled={(key === 'adults' && options.adults <= 1) || (key === 'children' && options.children <= 0) || (key === 'rooms' && options.rooms <= 1)}
+                                                        onClick={() => handleOption(key, 'd')}
+                                                        className="w-8 h-8 border border-[#0071c2] text-[#0071c2] rounded font-bold disabled:opacity-30 hover:bg-blue-50 transition"
+                                                    >−</button>
+                                                    <span className="w-4 text-center font-semibold">{options[key]}</span>
+                                                    <button
+                                                        onClick={() => handleOption(key, 'i')}
+                                                        className="w-8 h-8 border border-[#0071c2] text-[#0071c2] rounded font-bold hover:bg-blue-50 transition"
+                                                    >+</button>
+                                                </div>
                                             </div>
-                                        </div>
-                                        <div className="flex justify-between items-center mb-4">
-                                            <span className="text-sm font-medium">Дети</span>
-                                            <div className="flex items-center gap-3">
-                                                <button disabled={options.children <= 0} onClick={() => handleOption('children', 'd')} className="w-8 h-8 border rounded">-</button>
-                                                <span>{options.children}</span>
-                                                <button onClick={() => handleOption('children', 'i')} className="w-8 h-8 border rounded">+</button>
-                                            </div>
-                                        </div>
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-sm font-medium">Номера</span>
-                                            <div className="flex items-center gap-3">
-                                                <button disabled={options.rooms <= 1} onClick={() => handleOption('rooms', 'd')} className="w-8 h-8 border rounded">-</button>
-                                                <span>{options.rooms}</span>
-                                                <button onClick={() => handleOption('rooms', 'i')} className="w-8 h-8 border rounded">+</button>
-                                            </div>
-                                        </div>
+                                        ))}
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); setIsGuestMenuOpen(false); }}
+                                            className="w-full mt-4 border border-[#0071c2] text-[#0071c2] font-bold py-2 rounded hover:bg-blue-50 transition"
+                                        >
+                                            Готово
+                                        </button>
                                     </div>
                                 )}
                             </div>
-                            <button onClick={handleSearch} className="bg-[#0071c2] text-white font-bold px-8 py-3 rounded-r-md">Найти</button>
+                            <button
+                                onClick={handleSearch}
+                                className="bg-[#0071c2] hover:bg-[#005999] text-white font-bold px-8 py-3 rounded-r-md transition"
+                            >
+                                Найти
+                            </button>
                         </div>
                     </div>
 
                     <div className="flex flex-col lg:flex-row gap-6">
+                        {/* Таблица номеров */}
                         <div className="flex-1 bg-white rounded-xl border shadow-sm overflow-hidden">
                             <div className="bg-[#003580] px-6 py-4">
                                 <h2 className="text-white font-bold">Доступные номера</h2>
+                                {nights > 0 && (
+                                    <p className="text-blue-200 text-sm mt-0.5">
+                                        {checkIn} — {checkOut} · {nights} ноч. · {guests} гост.
+                                    </p>
+                                )}
                             </div>
+
                             {loadingRooms ? (
-                                <div className="p-12 text-center">Загрузка...</div>
+                                <div className="p-12 text-center">
+                                    <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+                                </div>
+                            ) : roomTypes.length === 0 ? (
+                                <div className="p-12 text-center">
+                                    <p className="text-4xl mb-3">🛏</p>
+                                    <p className="text-gray-500 font-bold">Типы номеров не добавлены</p>
+                                    <p className="text-gray-400 text-sm mt-1">Владелец ещё не настроил номера</p>
+                                </div>
+                            ) : allUnavailable ? (
+                                <div className="p-12 text-center">
+                                    <p className="text-4xl mb-3">😔</p>
+                                    <p className="text-gray-700 font-bold text-lg">Нет свободных номеров</p>
+                                    <p className="text-gray-400 text-sm mt-1">На выбранные даты все номера заняты</p>
+                                    <p className="text-gray-400 text-sm">Попробуйте другие даты</p>
+                                </div>
                             ) : (
-                                <table className="w-full">
-                                    <thead className="bg-gray-50 border-b">
-                                    <tr>
-                                        <th className="text-left px-6 py-4 text-xs font-bold uppercase">Тип номера</th>
-                                        <th className="text-center px-4 py-4 text-xs font-bold uppercase">Вместимость</th>
-                                        <th className="text-center px-4 py-4 text-xs font-bold uppercase">Цена</th>
-                                        <th className="text-center px-4 py-4 text-xs font-bold uppercase">Выбор</th>
-                                    </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-200">
-                                    {roomTypes.map(room => (
-                                        <RoomTypeRow
-                                            key={room.id}
-                                            room={room}
-                                            nights={nights}
-                                            amenityIcons={amenityIcons}
-                                            isSelected={bookingState?.roomTypeId === room.id}
-                                            onSelect={handleSelectRoom}
-                                        />
-                                    ))}
-                                    </tbody>
-                                </table>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full">
+                                        <thead className="bg-gray-50 border-b">
+                                        <tr>
+                                            <th className="text-left px-6 py-4 text-xs font-bold uppercase text-gray-600">Тип номера</th>
+                                            <th className="text-center px-4 py-4 text-xs font-bold uppercase text-gray-600">Вместимость</th>
+                                            <th className="text-center px-4 py-4 text-xs font-bold uppercase text-gray-600">
+                                                {nights > 0 ? `Цена за ${nights} ноч.` : 'Цена/ночь'}
+                                            </th>
+                                            <th className="text-center px-4 py-4 text-xs font-bold uppercase text-gray-600">Доступно</th>
+                                            <th className="text-center px-4 py-4 text-xs font-bold uppercase text-gray-600">Выбор</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-200">
+                                        {roomTypes.map(room => (
+                                            <RoomTypeRow
+                                                key={room.id}
+                                                room={room}
+                                                nights={nights}
+                                                amenityIcons={amenityIcons}
+                                                isSelected={bookingState?.roomTypeId === room.id}
+                                                onSelect={handleSelectRoom}
+                                                defaultRooms={options.rooms}
+                                            />
+                                        ))}
+                                        </tbody>
+                                    </table>
+                                </div>
                             )}
                         </div>
 
@@ -342,24 +441,69 @@ export default function HotelPage({
                             <div className="bg-white rounded-xl border shadow-sm p-6 sticky top-24">
                                 <h3 className="font-bold text-xl mb-4">Бронирование</h3>
                                 {bookingSuccess ? (
-                                    <div className="text-center text-green-600 font-bold">Успешно забронировано!</div>
+                                    <div className="text-center py-6">
+                                        <div className="text-4xl mb-3">✅</div>
+                                        <p className="text-green-700 font-bold text-lg">Успешно забронировано!</p>
+                                        <p className="text-green-600 text-sm mt-1">{hotel.name}</p>
+                                        <p className="text-green-800 font-bold text-xl mt-2">{totalPrice.toLocaleString()} ₸</p>
+                                        <button
+                                            onClick={onBack}
+                                            className="mt-4 w-full bg-green-600 text-white py-2 rounded-lg font-bold hover:bg-green-700 transition"
+                                        >
+                                            Отлично!
+                                        </button>
+                                    </div>
                                 ) : bookingState ? (
                                     <>
-                                        <p className="font-bold text-blue-700">{bookingState.roomTypeName}</p>
-                                        <p className="text-sm text-gray-500 mb-4">{nights} ноч., {bookingState.guests} гост.</p>
-                                        <div className="bg-blue-50 p-3 rounded mb-4">
-                                            <div className="flex justify-between font-bold">
-                                                <span>Итого:</span>
-                                                <span>{totalPrice.toLocaleString()} ₸</span>
-                                            </div>
+                                        <div className="bg-blue-50 rounded-lg p-4 mb-4">
+                                            <p className="font-bold text-blue-700">{bookingState.roomTypeName}</p>
+                                            <p className="text-sm text-gray-600 mt-1">🛏 {bookingState.rooms} номер · 👤 {bookingState.guests} гост.</p>
+                                            {checkIn && checkOut && (
+                                                <>
+                                                    <p className="text-sm text-gray-600">📅 {checkIn} — {checkOut}</p>
+                                                    <p className="text-sm text-gray-600">🌙 {nights} ноч.</p>
+                                                </>
+                                            )}
                                         </div>
-                                        {bookingError && <p className="text-red-500 text-xs mb-2">{bookingError}</p>}
-                                        <button onClick={handleBook} disabled={bookingLoading} className="w-full bg-[#0071c2] text-white py-3 rounded-lg font-bold">
-                                            {bookingLoading ? 'Загрузка...' : 'Забронировать'}
+                                        {nights > 0 && (
+                                            <div className="border-t pt-4 mb-4">
+                                                <div className="flex justify-between text-sm text-gray-600 mb-1">
+                                                    <span>{bookingState.pricePerNight.toLocaleString()} ₸ × {nights} ноч.</span>
+                                                    <span>{(bookingState.pricePerNight * nights).toLocaleString()} ₸</span>
+                                                </div>
+                                                {bookingState.rooms > 1 && (
+                                                    <div className="flex justify-between text-sm text-gray-600 mb-1">
+                                                        <span>× {bookingState.rooms} номеров</span>
+                                                        <span>{totalPrice.toLocaleString()} ₸</span>
+                                                    </div>
+                                                )}
+                                                <div className="flex justify-between font-bold text-gray-900 text-lg mt-2">
+                                                    <span>Итого</span>
+                                                    <span>{totalPrice.toLocaleString()} ₸</span>
+                                                </div>
+                                            </div>
+                                        )}
+                                        {bookingError && (
+                                            <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-lg p-3 mb-4">
+                                                {bookingError}
+                                            </div>
+                                        )}
+                                        <button
+                                            onClick={handleBook}
+                                            disabled={bookingLoading || !checkIn || !checkOut}
+                                            className="w-full bg-[#0071c2] hover:bg-[#005999] disabled:bg-gray-300 text-white py-3 rounded-lg font-bold transition"
+                                        >
+                                            {bookingLoading ? 'Оформляем...' : 'Забронировать'}
                                         </button>
+                                        {(!checkIn || !checkOut) && (
+                                            <p className="text-xs text-gray-400 text-center mt-2">Выберите даты чтобы продолжить</p>
+                                        )}
                                     </>
                                 ) : (
-                                    <p className="text-gray-400 text-sm">Выберите номер, чтобы продолжить</p>
+                                    <div className="text-center py-8">
+                                        <p className="text-4xl mb-3">🛏</p>
+                                        <p className="text-gray-400 text-sm">Выберите номер из таблицы слева</p>
+                                    </div>
                                 )}
                             </div>
                         </div>
@@ -370,42 +514,84 @@ export default function HotelPage({
     );
 }
 
-function RoomTypeRow({ room, nights, amenityIcons, isSelected, onSelect }: {
+function RoomTypeRow({room, nights, amenityIcons, isSelected, onSelect, defaultRooms}: {
     room: RoomType;
     nights: number;
     amenityIcons: Record<string, string>;
     isSelected: boolean;
     onSelect: (room: RoomType, rooms: number) => void;
+    defaultRooms: number;
 }) {
-    const [selectedRooms, setSelectedRooms] = useState(1);
     const amenities = room.amenities ? room.amenities.split(',').map(a => a.trim()) : [];
     const isAvailable = room.availableRooms > 0;
 
     return (
-        <tr className={`${isSelected ? 'bg-blue-50' : ''} ${!isAvailable ? 'opacity-50' : ''}`}>
-            <td className="px-6 py-5">
+        <tr className={`${isSelected ? 'bg-blue-50' : 'hover:bg-gray-50'} ${!isAvailable ? 'opacity-50' : ''} transition`}>
+            <td className="px-6 py-5 align-top">
                 <p className="font-bold text-blue-700">{room.name}</p>
-                <div className="flex flex-wrap gap-2 mt-2">
-                    {amenities.map(a => (
-                        <span key={a} className="text-xs bg-gray-100 px-2 py-1 rounded" title={a}>
-                            {amenityIcons[a] || '✔️'} {a}
-                        </span>
+                {room.description && (
+                    <p className="text-xs text-gray-500 mt-1">{room.description}</p>
+                )}
+                {amenities.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-2">
+                        {amenities.map(a => (
+                            <span key={a} className="text-xs bg-gray-100 px-2 py-0.5 rounded-full text-gray-600">
+                                {amenityIcons[a] || '✓'} {a}
+                            </span>
+                        ))}
+                    </div>
+                )}
+            </td>
+            <td className="text-center px-4 py-5 align-top">
+                <div className="flex justify-center gap-0.5">
+                    {Array.from({length: Math.min(room.maxGuests, 4)}).map((_, i) => (
+                        <span key={i} className="text-sm">👤</span>
                     ))}
                 </div>
-                {room.description && <p className="text-xs text-gray-500 mt-2">{room.description}</p>}
+                <p className="text-xs text-gray-500 mt-1">до {room.maxGuests} чел.</p>
             </td>
-            <td className="text-center text-sm">👤 × {room.maxGuests}</td>
-            <td className="text-center font-bold">
-                {nights > 0 ? (room.pricePerNight * nights).toLocaleString() : room.pricePerNight.toLocaleString()} ₸
+            <td className="text-center px-4 py-5 align-top">
+                <p className="font-bold text-gray-900 text-lg">
+                    {nights > 0
+                        ? (room.pricePerNight * nights * defaultRooms).toLocaleString()
+                        : room.pricePerNight.toLocaleString()} ₸
+                </p>
+                {nights > 0 && (
+                    <p className="text-xs text-gray-400">{room.pricePerNight.toLocaleString()} ₸/ночь</p>
+                )}
             </td>
-            <td className="px-4 text-center">
-                <button
-                    disabled={!isAvailable}
-                    onClick={() => onSelect(room, selectedRooms)}
-                    className={`px-4 py-2 rounded text-sm font-bold ${isSelected ? 'bg-green-600 text-white' : 'bg-blue-100 text-blue-700 hover:bg-blue-200'}`}
-                >
-                    {isSelected ? 'Выбрано' : 'Выбрать'}
-                </button>
+            <td className="text-center px-4 py-5 align-top">
+                {isAvailable ? (
+                    <span className={`text-xs font-bold px-2 py-1 rounded-full ${
+                        room.availableRooms <= 3
+                            ? 'bg-orange-100 text-orange-700'
+                            : 'bg-green-100 text-green-700'
+                    }`}>
+                        {room.availableRooms <= 3
+                            ? `⚡ Осталось ${room.availableRooms}`
+                            : `✓ ${room.availableRooms} своб.`}
+                    </span>
+                ) : (
+                    <span className="text-xs font-bold bg-red-100 text-red-600 px-2 py-1 rounded-full">
+                        Занято
+                    </span>
+                )}
+            </td>
+            <td className="px-4 py-5 text-center align-top">
+                {isAvailable ? (
+                    <button
+                        onClick={() => onSelect(room, defaultRooms)}
+                        className={`px-6 py-2 rounded-lg text-sm font-bold transition ${
+                            isSelected
+                                ? 'bg-green-600 text-white hover:bg-green-700'
+                                : 'bg-[#0071c2] text-white hover:bg-[#005999]'
+                        }`}
+                    >
+                        {isSelected ? '✓ Выбрано' : 'Выбрать'}
+                    </button>
+                ) : (
+                    <span className="text-xs text-gray-400">Недоступно</span>
+                )}
             </td>
         </tr>
     );

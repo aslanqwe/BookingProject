@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import axios from 'axios'
 import './index.css'
 import Register from './Register'
@@ -15,12 +15,14 @@ interface Hotel {
     id: number;
     name: string;
     city: string;
+    address?: string;
     pricePerNight: number;
     description?: string;
     stars: number;
     totalRooms: number;
     imageUrl?: string;
     propertyType: string;
+    hotelAmenities?: string; 
 }
 
 interface User {
@@ -36,7 +38,13 @@ function App() {
     const [searchCity, setSearchCity] = useState('')
     const [checkIn, setCheckIn] = useState('')
     const [checkOut, setCheckOut] = useState('')
+
+    // Новые состояния для гостей и номеров
     const [guests, setGuests] = useState(2)
+    const [rooms, setRooms] = useState(1)
+    const [isGuestMenuOpen, setIsGuestMenuOpen] = useState(false)
+    const guestMenuRef = useRef<HTMLDivElement>(null)
+
     const [maxPrice, setMaxPrice] = useState(500000)
     const [filterStars, setFilterStars] = useState(0)
     const [priceTimer, setPriceTimer] = useState<ReturnType<typeof setTimeout> | null>(null)
@@ -47,12 +55,37 @@ function App() {
     const PAGE_SIZE = 5
     const [sortBy, setSortBy] = useState('')
 
-    const fetchHotels = (city = '', price = 500000, stars = 0, page = 1, sort = '') => {
+    // Закрытие меню при клике вне его области
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (guestMenuRef.current && !guestMenuRef.current.contains(event.target as Node)) {
+                setIsGuestMenuOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    // Склонение слова "номер"
+    const getRoomsText = (count: number) => {
+        const lastDigit = count % 10;
+        const lastTwoDigits = count % 100;
+        if (lastTwoDigits >= 11 && lastTwoDigits <= 19) return `${count} номеров`;
+        if (lastDigit === 1) return `${count} номер`;
+        if (lastDigit >= 2 && lastDigit <= 4) return `${count} номера`;
+        return `${count} номеров`;
+    };
+
+    const fetchHotels = (city = searchCity, price = maxPrice, stars = filterStars, page = 1, sort = sortBy) => {
         axios.get('/api/hotels', {
             params: {
                 city: city.trim() || undefined,
                 maxPrice: price < 500000 ? price : undefined,
                 stars: stars > 0 ? stars : undefined,
+                checkIn: checkIn || undefined,   
+                checkOut: checkOut || undefined,  
+                guests: guests,                  
+                rooms: rooms,                     
                 page,
                 pageSize: PAGE_SIZE,
                 sortBy: sort || undefined
@@ -95,6 +128,7 @@ function App() {
         setCheckIn('');
         setCheckOut('');
         setGuests(2);
+        setRooms(1); // Сбрасываем номера
         setFilterStars(0);
         setCurrentPage(1);
         setSortBy('');
@@ -173,7 +207,7 @@ function App() {
             )}
             {view === 'my-bookings' && <main className="container mx-auto py-8 px-4"><MyBookings /></main>}
             {view === 'owner-dashboard' && <main className="container mx-auto py-8 px-4"><OwnerDashboard /></main>}
-            
+
             {view === 'hotel-page' && hotelPageHotel && (
                 <HotelPage
                     hotel={hotelPageHotel}
@@ -184,7 +218,7 @@ function App() {
                     onBookingSuccess={() => {}}
                 />
             )}
-            
+
             {view === 'list' && (
                 <>
                     {/* ГЕРОБЛОК */}
@@ -214,7 +248,6 @@ function App() {
                                         </svg>
                                         <div>
                                             <p className="text-xs text-gray-400">Заезд</p>
-                                            {/* Дата заезда */}
                                             <input
                                                 type="date"
                                                 className="outline-none text-sm text-gray-700"
@@ -233,7 +266,6 @@ function App() {
                                         </svg>
                                         <div>
                                             <p className="text-xs text-gray-400">Выезд</p>
-                                            {/* Дата выезда */}
                                             <input
                                                 type="date"
                                                 className="outline-none text-sm text-gray-700"
@@ -243,19 +275,73 @@ function App() {
                                             />
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-2 px-4 py-3 border-b md:border-b-0 md:border-r border-gray-200">
+
+                                    {/* ОБНОВЛЕННЫЙ БЛОК: Гости и номера */}
+                                    <div
+                                        className="relative flex items-center gap-2 px-4 py-3 border-b md:border-b-0 md:border-r border-gray-200 cursor-pointer hover:bg-gray-50 transition"
+                                        ref={guestMenuRef}
+                                        onClick={() => setIsGuestMenuOpen(!isGuestMenuOpen)}
+                                    >
                                         <svg className="w-5 h-5 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
                                         </svg>
                                         <div>
-                                            <p className="text-xs text-gray-400">Гостей</p>
-                                            <div className="flex items-center gap-2">
-                                                <button onClick={() => setGuests(g => Math.max(1, g - 1))} className="w-6 h-6 rounded-full border border-blue-600 text-blue-600 font-bold text-lg flex items-center justify-center hover:bg-blue-50">−</button>
-                                                <span className="text-sm font-semibold w-4 text-center">{guests}</span>
-                                                <button onClick={() => setGuests(g => g + 1)} className="w-6 h-6 rounded-full border border-blue-600 text-blue-600 font-bold text-lg flex items-center justify-center hover:bg-blue-50">+</button>
+                                            <p className="text-xs text-gray-400">Гости и номера</p>
+                                            <div className="text-sm text-gray-700 whitespace-nowrap outline-none">
+                                                {guests} взрослых · {getRoomsText(rooms)}
                                             </div>
                                         </div>
+
+                                        {/* ВЫПАДАЮЩЕЕ МЕНЮ */}
+                                        {isGuestMenuOpen && (
+                                            <div
+                                                className="absolute top-full right-0 mt-3 w-80 bg-white rounded-lg shadow-xl border border-gray-200 p-6 z-50 cursor-default"
+                                                onClick={e => e.stopPropagation()} // Предотвращаем закрытие при клике внутри меню
+                                            >
+                                                <div className="flex justify-between items-center mb-6">
+                                                    <div>
+                                                        <p className="font-bold text-gray-800">Взрослые</p>
+                                                    </div>
+                                                    <div className="flex items-center gap-4">
+                                                        <button
+                                                            onClick={() => setGuests(g => Math.max(1, g - 1))}
+                                                            disabled={guests <= 1}
+                                                            className="w-10 h-10 rounded border border-[#0071c2] text-[#0071c2] font-bold text-xl flex items-center justify-center hover:bg-blue-50 disabled:opacity-30 disabled:hover:bg-transparent transition"
+                                                        >−</button>
+                                                        <span className="text-md font-semibold w-6 text-center">{guests}</span>
+                                                        <button
+                                                            onClick={() => setGuests(g => g + 1)}
+                                                            className="w-10 h-10 rounded border border-[#0071c2] text-[#0071c2] font-bold text-xl flex items-center justify-center hover:bg-blue-50 transition"
+                                                        >+</button>
+                                                    </div>
+                                                </div>
+                                                <div className="flex justify-between items-center mb-8">
+                                                    <div>
+                                                        <p className="font-bold text-gray-800">Номера</p>
+                                                    </div>
+                                                    <div className="flex items-center gap-4">
+                                                        <button
+                                                            onClick={() => setRooms(r => Math.max(1, r - 1))}
+                                                            disabled={rooms <= 1}
+                                                            className="w-10 h-10 rounded border border-[#0071c2] text-[#0071c2] font-bold text-xl flex items-center justify-center hover:bg-blue-50 disabled:opacity-30 disabled:hover:bg-transparent transition"
+                                                        >−</button>
+                                                        <span className="text-md font-semibold w-6 text-center">{rooms}</span>
+                                                        <button
+                                                            onClick={() => setRooms(r => r + 1)}
+                                                            className="w-10 h-10 rounded border border-[#0071c2] text-[#0071c2] font-bold text-xl flex items-center justify-center hover:bg-blue-50 transition"
+                                                        >+</button>
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    onClick={() => setIsGuestMenuOpen(false)}
+                                                    className="w-full border border-[#0071c2] text-[#0071c2] font-bold py-2 rounded hover:bg-blue-50 transition"
+                                                >
+                                                    Готово
+                                                </button>
+                                            </div>
+                                        )}
                                     </div>
+
                                     <button
                                         onClick={() => { setCurrentPage(1); fetchHotels(searchCity, maxPrice, filterStars, 1, sortBy); }}
                                         className="bg-[#0071c2] hover:bg-[#005999] text-white font-bold px-8 py-3 rounded-r-md transition text-sm whitespace-nowrap"
@@ -362,7 +448,7 @@ function App() {
                                                                 <p className="text-yellow-400 text-sm mt-1">
                                                                     {'★'.repeat(h.stars)}{'☆'.repeat(5 - h.stars)}
                                                                 </p>
-                                                                {/* ДОСТУПНОСТЬ — здесь, под звёздами */}
+                                                                {/* ДОСТУПНОСТЬ */}
                                                                 {checkIn && checkOut && (
                                                                     <div className="mt-1">
                                                                         <AvailabilityBadge
