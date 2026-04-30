@@ -8,6 +8,7 @@ import MyBookings from './MyBookings';
 import OwnerDashboard from './OwnerDashboard';
 import AvailabilityBadge from './AvailabilityBadge';
 import HotelPage from './HotelPage';
+import { Routes, Route, useNavigate, useParams } from 'react-router-dom'
 
 axios.defaults.withCredentials = true;
 
@@ -22,7 +23,7 @@ interface Hotel {
     totalRooms: number;
     imageUrl?: string;
     propertyType: string;
-    hotelAmenities?: string; 
+    hotelAmenities?: string;
 }
 
 interface User {
@@ -30,32 +31,71 @@ interface User {
     role: string;
 }
 
+function HotelPageWrapper({ hotels, checkIn, checkOut, guests }: {
+    hotels: Hotel[];
+    checkIn: string;
+    checkOut: string;
+    guests: number;
+}) {
+    const { id } = useParams();
+    const navigate = useNavigate();
+    const [hotel, setHotel] = useState<Hotel | null>(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const found = hotels.find(h => h.id === Number(id));
+        if (found) {
+            setHotel(found);
+            setLoading(false);
+        } else {
+            axios.get(`/api/hotels/${id}`)
+                .then(res => setHotel(res.data))
+                .catch(() => navigate('/'))
+                .finally(() => setLoading(false));
+        }
+    }, [id]);
+
+    if (loading) return (
+        <div className="min-h-screen flex items-center justify-center">
+            <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+        </div>
+    );
+
+    if (!hotel) return null;
+
+    return (
+        <HotelPage
+            hotel={hotel}
+            checkIn={checkIn}
+            checkOut={checkOut}
+            guests={guests}
+            onBack={() => navigate('/')}
+            onBookingSuccess={() => {}}
+        />
+    );
+}
+
 function App() {
+    const navigate = useNavigate()
     const [hotels, setHotels] = useState<Hotel[]>([])
-    const [view, setView] = useState<'list' | 'register' | 'login' | 'add-hotel' | 'my-bookings' | 'owner-dashboard' | 'hotel-page'>('list')
     const [user, setUser] = useState<User | null>(null)
     const [loading, setLoading] = useState(true)
     const [searchCity, setSearchCity] = useState('')
     const [checkIn, setCheckIn] = useState('')
     const [checkOut, setCheckOut] = useState('')
-
-    // Новые состояния для гостей и номеров
     const [guests, setGuests] = useState(2)
     const [rooms, setRooms] = useState(1)
     const [isGuestMenuOpen, setIsGuestMenuOpen] = useState(false)
     const guestMenuRef = useRef<HTMLDivElement>(null)
-
     const [maxPrice, setMaxPrice] = useState(500000)
     const [filterStars, setFilterStars] = useState(0)
     const [priceTimer, setPriceTimer] = useState<ReturnType<typeof setTimeout> | null>(null)
     const [currentPage, setCurrentPage] = useState(1)
     const [totalPages, setTotalPages] = useState(1)
     const [totalCount, setTotalCount] = useState(0)
-    const [hotelPageHotel, setHotelPageHotel] = useState<Hotel | null>(null)
     const PAGE_SIZE = 5
     const [sortBy, setSortBy] = useState('')
 
-    // Закрытие меню при клике вне его области
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (guestMenuRef.current && !guestMenuRef.current.contains(event.target as Node)) {
@@ -66,7 +106,6 @@ function App() {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    // Склонение слова "номер"
     const getRoomsText = (count: number) => {
         const lastDigit = count % 10;
         const lastTwoDigits = count % 100;
@@ -82,10 +121,10 @@ function App() {
                 city: city.trim() || undefined,
                 maxPrice: price < 500000 ? price : undefined,
                 stars: stars > 0 ? stars : undefined,
-                checkIn: checkIn || undefined,   
-                checkOut: checkOut || undefined,  
-                guests: guests,                  
-                rooms: rooms,                     
+                checkIn: checkIn || undefined,
+                checkOut: checkOut || undefined,
+                guests: guests,
+                rooms: rooms,
                 page,
                 pageSize: PAGE_SIZE,
                 sortBy: sort || undefined
@@ -119,7 +158,7 @@ function App() {
         await axios.post('/api/auth/logout');
         localStorage.removeItem('user');
         setUser(null);
-        setView('list');
+        navigate('/');
     };
 
     const handleReset = () => {
@@ -128,7 +167,7 @@ function App() {
         setCheckIn('');
         setCheckOut('');
         setGuests(2);
-        setRooms(1); // Сбрасываем номера
+        setRooms(1);
         setFilterStars(0);
         setCurrentPage(1);
         setSortBy('');
@@ -142,6 +181,44 @@ function App() {
         fetchHotels(searchCity, maxPrice, newStars, 1, sortBy);
     };
 
+    // Шапка — общая для всех страниц
+    const Navbar = () => (
+        <nav className="bg-[#003580] text-white shadow-md">
+            <div className="container mx-auto px-4">
+                <div className="flex justify-between items-center h-16">
+                    <h1
+                        className="text-2xl font-bold cursor-pointer tracking-tight"
+                        onClick={() => { navigate('/'); fetchHotels(); }}
+                    >
+                        Booking.kz
+                    </h1>
+                    <div className="flex items-center gap-3">
+                        {!user ? (
+                            <>
+                                <button onClick={() => navigate('/login')} className="text-sm font-medium px-4 py-2 rounded border border-white/40 hover:bg-white/10 transition">Войти</button>
+                                <button onClick={() => navigate('/register')} className="text-sm font-bold px-4 py-2 rounded bg-white text-[#003580] hover:bg-gray-100 transition">Зарегистрироваться</button>
+                            </>
+                        ) : (
+                            <>
+                                <span className="text-sm text-blue-200 hidden md:block">
+                                    {user.email} <strong className="text-white">({user.role})</strong>
+                                </span>
+                                <button onClick={() => navigate('/my-bookings')} className="text-sm font-medium px-4 py-2 rounded border border-white/40 hover:bg-white/10 transition">Мои брони</button>
+                                {user.role === 'Owner' && (
+                                    <>
+                                        <button onClick={() => navigate('/owner-dashboard')} className="text-sm font-medium px-4 py-2 rounded border border-white/40 hover:bg-white/10 transition">Мои отели</button>
+                                        <button onClick={() => navigate('/add-hotel')} className="text-sm font-bold px-4 py-2 rounded bg-green-500 hover:bg-green-600 transition">+ Добавить</button>
+                                    </>
+                                )}
+                                <button onClick={handleLogout} className="text-sm px-4 py-2 rounded border border-white/40 hover:bg-white/10 transition">Выйти</button>
+                            </>
+                        )}
+                    </div>
+                </div>
+            </div>
+        </nav>
+    );
+
     if (loading) {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -153,375 +230,320 @@ function App() {
         );
     }
 
-    return (
-        <div className="min-h-screen bg-gray-100">
-            {/* ШАПКА */}
-            <nav className="bg-[#003580] text-white shadow-md">
+    // Главная страница
+    const HomePage = () => (
+        <>
+            {/* ГЕРОБЛОК */}
+            <div className="bg-[#003580] pb-16 pt-8">
                 <div className="container mx-auto px-4">
-                    <div className="flex justify-between items-center h-16">
-                        <h1
-                            className="text-2xl font-bold cursor-pointer tracking-tight"
-                            onClick={() => { setView('list'); fetchHotels(); }}
-                        >
-                            Booking.kz
-                        </h1>
-                        <div className="flex items-center gap-3">
-                            {!user ? (
-                                <>
-                                    <button onClick={() => setView('login')} className="text-sm font-medium px-4 py-2 rounded border border-white/40 hover:bg-white/10 transition">Войти</button>
-                                    <button onClick={() => setView('register')} className="text-sm font-bold px-4 py-2 rounded bg-white text-[#003580] hover:bg-gray-100 transition">Зарегистрироваться</button>
-                                </>
-                            ) : (
-                                <>
-                                    <span className="text-sm text-blue-200 hidden md:block">
-                                        {user.email} <strong className="text-white">({user.role})</strong>
-                                    </span>
-                                    {user.role === 'User' && (
-                                        <button onClick={() => setView('my-bookings')} className="text-sm font-medium px-4 py-2 rounded border border-white/40 hover:bg-white/10 transition">Мои брони</button>
-                                    )}
-                                    {user.role === 'Owner' && (
-                                        <>
-                                            <button onClick={() => setView('my-bookings')} className="text-sm font-medium px-4 py-2 rounded border border-white/40 hover:bg-white/10 transition">Мои брони</button>
-                                            <button onClick={() => setView('owner-dashboard')} className="text-sm font-medium px-4 py-2 rounded border border-white/40 hover:bg-white/10 transition">Мои отели</button>
-                                            <button onClick={() => setView('add-hotel')} className="text-sm font-bold px-4 py-2 rounded bg-green-500 hover:bg-green-600 transition">+ Добавить отель</button>
-                                        </>
-                                    )}
-                                    <button onClick={handleLogout} className="text-sm px-4 py-2 rounded border border-white/40 hover:bg-white/10 transition">Выйти</button>
-                                </>
-                            )}
+                    <h2 className="text-3xl font-bold text-white mb-1">Отели в Казахстане</h2>
+                    <p className="text-blue-200 mb-6 text-sm">Найдите идеальное жильё для вашей поездки</p>
+                    <div className="bg-[#febb02] p-1 rounded-lg inline-block w-full">
+                        <div className="bg-white rounded-md flex flex-col md:flex-row">
+                            <div className="flex items-center gap-2 px-4 py-3 flex-1 border-b md:border-b-0 md:border-r border-gray-200">
+                                <svg className="w-5 h-5 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                                <input
+                                    type="text"
+                                    placeholder="Куда вы хотите поехать?"
+                                    className="outline-none text-sm w-full text-gray-700 placeholder-gray-400"
+                                    value={searchCity}
+                                    onChange={e => setSearchCity(e.target.value)}
+                                    onKeyDown={e => e.key === 'Enter' && fetchHotels(searchCity, maxPrice, filterStars, 1, sortBy)}
+                                />
+                            </div>
+                            <div className="flex items-center gap-2 px-4 py-3 border-b md:border-b-0 md:border-r border-gray-200">
+                                <svg className="w-5 h-5 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                                <div>
+                                    <p className="text-xs text-gray-400">Заезд</p>
+                                    <input
+                                        type="date"
+                                        className="outline-none text-sm text-gray-700"
+                                        value={checkIn}
+                                        min={new Date().toISOString().split('T')[0]}
+                                        onChange={e => {
+                                            setCheckIn(e.target.value);
+                                            if (checkOut && e.target.value > checkOut) setCheckOut('');
+                                        }}
+                                    />
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2 px-4 py-3 border-b md:border-b-0 md:border-r border-gray-200">
+                                <svg className="w-5 h-5 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                                <div>
+                                    <p className="text-xs text-gray-400">Выезд</p>
+                                    <input
+                                        type="date"
+                                        className="outline-none text-sm text-gray-700"
+                                        value={checkOut}
+                                        min={checkIn || new Date().toISOString().split('T')[0]}
+                                        onChange={e => setCheckOut(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+                            <div
+                                className="relative flex items-center gap-2 px-4 py-3 border-b md:border-b-0 md:border-r border-gray-200 cursor-pointer hover:bg-gray-50 transition"
+                                ref={guestMenuRef}
+                                onClick={() => setIsGuestMenuOpen(!isGuestMenuOpen)}
+                            >
+                                <svg className="w-5 h-5 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                                <div>
+                                    <p className="text-xs text-gray-400">Гости и номера</p>
+                                    <div className="text-sm text-gray-700 whitespace-nowrap">
+                                        {guests} взрослых · {getRoomsText(rooms)}
+                                    </div>
+                                </div>
+                                {isGuestMenuOpen && (
+                                    <div
+                                        className="absolute top-full right-0 mt-3 w-80 bg-white rounded-lg shadow-xl border border-gray-200 p-6 z-50 cursor-default"
+                                        onClick={e => e.stopPropagation()}
+                                    >
+                                        <div className="flex justify-between items-center mb-6">
+                                            <p className="font-bold text-gray-800">Взрослые</p>
+                                            <div className="flex items-center gap-4">
+                                                <button onClick={() => setGuests(g => Math.max(1, g - 1))} disabled={guests <= 1} className="w-10 h-10 rounded border border-[#0071c2] text-[#0071c2] font-bold text-xl flex items-center justify-center hover:bg-blue-50 disabled:opacity-30 transition">−</button>
+                                                <span className="text-md font-semibold w-6 text-center">{guests}</span>
+                                                <button onClick={() => setGuests(g => g + 1)} className="w-10 h-10 rounded border border-[#0071c2] text-[#0071c2] font-bold text-xl flex items-center justify-center hover:bg-blue-50 transition">+</button>
+                                            </div>
+                                        </div>
+                                        <div className="flex justify-between items-center mb-6">
+                                            <p className="font-bold text-gray-800">Номера</p>
+                                            <div className="flex items-center gap-4">
+                                                <button onClick={() => setRooms(r => Math.max(1, r - 1))} disabled={rooms <= 1} className="w-10 h-10 rounded border border-[#0071c2] text-[#0071c2] font-bold text-xl flex items-center justify-center hover:bg-blue-50 disabled:opacity-30 transition">−</button>
+                                                <span className="text-md font-semibold w-6 text-center">{rooms}</span>
+                                                <button onClick={() => setRooms(r => r + 1)} className="w-10 h-10 rounded border border-[#0071c2] text-[#0071c2] font-bold text-xl flex items-center justify-center hover:bg-blue-50 transition">+</button>
+                                            </div>
+                                        </div>
+                                        <button onClick={() => setIsGuestMenuOpen(false)} className="w-full border border-[#0071c2] text-[#0071c2] font-bold py-2 rounded hover:bg-blue-50 transition">Готово</button>
+                                    </div>
+                                )}
+                            </div>
+                            <button
+                                onClick={() => { setCurrentPage(1); fetchHotels(searchCity, maxPrice, filterStars, 1, sortBy); }}
+                                className="bg-[#0071c2] hover:bg-[#005999] text-white font-bold px-8 py-3 rounded-r-md transition text-sm whitespace-nowrap"
+                            >
+                                Найти
+                            </button>
                         </div>
                     </div>
                 </div>
-            </nav>
+            </div>
 
-            {view === 'register' && <main className="container mx-auto py-8 px-4"><Register /></main>}
-            {view === 'login' && (
-                <main className="container mx-auto py-8 px-4">
-                    <Login onLoginSuccess={(userData) => { setUser(userData); fetchHotels(); setView('list'); }} />
-                </main>
-            )}
-            {view === 'add-hotel' && user && (
-                <main className="container mx-auto py-8 px-4">
-                    <AddHotel ownerEmail={user.email} onSuccess={() => { fetchHotels(); setView('list'); }} />
-                </main>
-            )}
-            {view === 'my-bookings' && <main className="container mx-auto py-8 px-4"><MyBookings /></main>}
-            {view === 'owner-dashboard' && <main className="container mx-auto py-8 px-4"><OwnerDashboard /></main>}
-
-            {view === 'hotel-page' && hotelPageHotel && (
-                <HotelPage
-                    hotel={hotelPageHotel}
-                    checkIn={checkIn}
-                    checkOut={checkOut}
-                    guests={guests}
-                    onBack={() => setView('list')}
-                    onBookingSuccess={() => {}}
-                />
-            )}
-
-            {view === 'list' && (
-                <>
-                    {/* ГЕРОБЛОК */}
-                    <div className="bg-[#003580] pb-16 pt-8">
-                        <div className="container mx-auto px-4">
-                            <h2 className="text-3xl font-bold text-white mb-1">Отели в Казахстане</h2>
-                            <p className="text-blue-200 mb-6 text-sm">Найдите идеальное жильё для вашей поездки</p>
-                            <div className="bg-[#febb02] p-1 rounded-lg inline-block w-full">
-                                <div className="bg-white rounded-md flex flex-col md:flex-row">
-                                    <div className="flex items-center gap-2 px-4 py-3 flex-1 border-b md:border-b-0 md:border-r border-gray-200">
-                                        <svg className="w-5 h-5 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                                        </svg>
-                                        <input
-                                            type="text"
-                                            placeholder="Куда вы хотите поехать?"
-                                            className="outline-none text-sm w-full text-gray-700 placeholder-gray-400"
-                                            value={searchCity}
-                                            onChange={e => setSearchCity(e.target.value)}
-                                            onKeyDown={e => e.key === 'Enter' && fetchHotels(searchCity, maxPrice, filterStars, 1, sortBy)}
-                                        />
-                                    </div>
-                                    <div className="flex items-center gap-2 px-4 py-3 border-b md:border-b-0 md:border-r border-gray-200">
-                                        <svg className="w-5 h-5 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                        </svg>
-                                        <div>
-                                            <p className="text-xs text-gray-400">Заезд</p>
-                                            <input
-                                                type="date"
-                                                className="outline-none text-sm text-gray-700"
-                                                value={checkIn}
-                                                min={new Date().toISOString().split('T')[0]}
-                                                onChange={e => {
-                                                    setCheckIn(e.target.value);
-                                                    if (checkOut && e.target.value > checkOut) setCheckOut('');
-                                                }}
-                                            />
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-2 px-4 py-3 border-b md:border-b-0 md:border-r border-gray-200">
-                                        <svg className="w-5 h-5 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                        </svg>
-                                        <div>
-                                            <p className="text-xs text-gray-400">Выезд</p>
-                                            <input
-                                                type="date"
-                                                className="outline-none text-sm text-gray-700"
-                                                value={checkOut}
-                                                min={checkIn || new Date().toISOString().split('T')[0]}
-                                                onChange={e => setCheckOut(e.target.value)}
-                                            />
-                                        </div>
-                                    </div>
-
-                                    {/* ОБНОВЛЕННЫЙ БЛОК: Гости и номера */}
-                                    <div
-                                        className="relative flex items-center gap-2 px-4 py-3 border-b md:border-b-0 md:border-r border-gray-200 cursor-pointer hover:bg-gray-50 transition"
-                                        ref={guestMenuRef}
-                                        onClick={() => setIsGuestMenuOpen(!isGuestMenuOpen)}
-                                    >
-                                        <svg className="w-5 h-5 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-                                        </svg>
-                                        <div>
-                                            <p className="text-xs text-gray-400">Гости и номера</p>
-                                            <div className="text-sm text-gray-700 whitespace-nowrap outline-none">
-                                                {guests} взрослых · {getRoomsText(rooms)}
-                                            </div>
-                                        </div>
-
-                                        {/* ВЫПАДАЮЩЕЕ МЕНЮ */}
-                                        {isGuestMenuOpen && (
-                                            <div
-                                                className="absolute top-full right-0 mt-3 w-80 bg-white rounded-lg shadow-xl border border-gray-200 p-6 z-50 cursor-default"
-                                                onClick={e => e.stopPropagation()} // Предотвращаем закрытие при клике внутри меню
-                                            >
-                                                <div className="flex justify-between items-center mb-6">
-                                                    <div>
-                                                        <p className="font-bold text-gray-800">Взрослые</p>
-                                                    </div>
-                                                    <div className="flex items-center gap-4">
-                                                        <button
-                                                            onClick={() => setGuests(g => Math.max(1, g - 1))}
-                                                            disabled={guests <= 1}
-                                                            className="w-10 h-10 rounded border border-[#0071c2] text-[#0071c2] font-bold text-xl flex items-center justify-center hover:bg-blue-50 disabled:opacity-30 disabled:hover:bg-transparent transition"
-                                                        >−</button>
-                                                        <span className="text-md font-semibold w-6 text-center">{guests}</span>
-                                                        <button
-                                                            onClick={() => setGuests(g => g + 1)}
-                                                            className="w-10 h-10 rounded border border-[#0071c2] text-[#0071c2] font-bold text-xl flex items-center justify-center hover:bg-blue-50 transition"
-                                                        >+</button>
-                                                    </div>
-                                                </div>
-                                                <div className="flex justify-between items-center mb-8">
-                                                    <div>
-                                                        <p className="font-bold text-gray-800">Номера</p>
-                                                    </div>
-                                                    <div className="flex items-center gap-4">
-                                                        <button
-                                                            onClick={() => setRooms(r => Math.max(1, r - 1))}
-                                                            disabled={rooms <= 1}
-                                                            className="w-10 h-10 rounded border border-[#0071c2] text-[#0071c2] font-bold text-xl flex items-center justify-center hover:bg-blue-50 disabled:opacity-30 disabled:hover:bg-transparent transition"
-                                                        >−</button>
-                                                        <span className="text-md font-semibold w-6 text-center">{rooms}</span>
-                                                        <button
-                                                            onClick={() => setRooms(r => r + 1)}
-                                                            className="w-10 h-10 rounded border border-[#0071c2] text-[#0071c2] font-bold text-xl flex items-center justify-center hover:bg-blue-50 transition"
-                                                        >+</button>
-                                                    </div>
-                                                </div>
-                                                <button
-                                                    onClick={() => setIsGuestMenuOpen(false)}
-                                                    className="w-full border border-[#0071c2] text-[#0071c2] font-bold py-2 rounded hover:bg-blue-50 transition"
-                                                >
-                                                    Готово
-                                                </button>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    <button
-                                        onClick={() => { setCurrentPage(1); fetchHotels(searchCity, maxPrice, filterStars, 1, sortBy); }}
-                                        className="bg-[#0071c2] hover:bg-[#005999] text-white font-bold px-8 py-3 rounded-r-md transition text-sm whitespace-nowrap"
-                                    >
-                                        Найти
-                                    </button>
+            {/* КОНТЕНТ */}
+            <div className="container mx-auto px-4 py-8">
+                <div className="flex flex-col lg:flex-row gap-6">
+                    {/* ФИЛЬТРЫ */}
+                    <aside className="lg:w-64 shrink-0">
+                        <div className="bg-white rounded-lg shadow-sm border p-4">
+                            <h3 className="font-bold text-gray-800 mb-4">Фильтры</h3>
+                            <div className="mb-5">
+                                <p className="text-sm font-semibold text-gray-700 mb-2">
+                                    Цена за ночь до: <span className="text-blue-600">{maxPrice.toLocaleString()} ₸</span>
+                                </p>
+                                <input
+                                    type="range" min={1000} max={500000} step={1000} value={maxPrice}
+                                    onChange={e => {
+                                        const val = Number(e.target.value);
+                                        setMaxPrice(val);
+                                        if (priceTimer) clearTimeout(priceTimer);
+                                        const timer = setTimeout(() => { setCurrentPage(1); fetchHotels(searchCity, val, filterStars, 1, sortBy); }, 500);
+                                        setPriceTimer(timer);
+                                    }}
+                                    className="w-full accent-blue-600"
+                                />
+                                <div className="flex justify-between text-xs text-gray-400 mt-1">
+                                    <span>1 000 ₸</span><span>500 000 ₸</span>
                                 </div>
                             </div>
+                            <div className="mb-5">
+                                <p className="text-sm font-semibold text-gray-700 mb-2">Звёзды</p>
+                                <div className="flex flex-col gap-2">
+                                    {[5, 4, 3, 2, 1].map(star => (
+                                        <button
+                                            key={star}
+                                            onClick={() => handleStarsFilter(star)}
+                                            className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition ${filterStars === star ? 'bg-blue-50 border-blue-500 text-blue-700' : 'border-gray-200 hover:bg-gray-50'}`}
+                                        >
+                                            <span className="text-yellow-400">{'★'.repeat(star)}{'☆'.repeat(5 - star)}</span>
+                                            <span>{star} звезды</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                            <button onClick={handleReset} className="w-full text-sm text-blue-600 border border-blue-200 rounded py-2 hover:bg-blue-50 transition">
+                                Сбросить фильтры
+                            </button>
                         </div>
-                    </div>
+                    </aside>
 
-                    {/* КОНТЕНТ */}
-                    <div className="container mx-auto px-4 py-8">
-                        <div className="flex flex-col lg:flex-row gap-6">
+                    {/* СПИСОК ОТЕЛЕЙ */}
+                    <div className="flex-1">
+                        <div className="flex justify-between items-center mb-4">
+                            <h2 className="text-xl font-bold text-gray-800">
+                                {searchCity ? `Отели в городе "${searchCity}"` : 'Все отели Казахстана'}
+                                <span className="text-sm font-normal text-gray-500 ml-2">{totalCount} вариантов</span>
+                            </h2>
+                            <select
+                                value={sortBy}
+                                onChange={e => { setSortBy(e.target.value); setCurrentPage(1); fetchHotels(searchCity, maxPrice, filterStars, 1, e.target.value); }}
+                                className="text-sm border border-gray-300 rounded-lg px-3 py-2 outline-none focus:border-blue-500 bg-white"
+                            >
+                                <option value="">По умолчанию</option>
+                                <option value="price_asc">Цена: по возрастанию</option>
+                                <option value="price_desc">Цена: по убыванию</option>
+                                <option value="stars_desc">Звёзды: 5 → 1</option>
+                                <option value="stars_asc">Звёзды: 1 → 5</option>
+                            </select>
+                        </div>
 
-                            {/* ФИЛЬТРЫ */}
-                            <aside className="lg:w-64 shrink-0">
-                                <div className="bg-white rounded-lg shadow-sm border p-4">
-                                    <h3 className="font-bold text-gray-800 mb-4">Фильтры</h3>
-                                    <div className="mb-5">
-                                        <p className="text-sm font-semibold text-gray-700 mb-2">
-                                            Цена за ночь до: <span className="text-blue-600">{maxPrice.toLocaleString()} ₸</span>
-                                        </p>
-                                        <input
-                                            type="range" min={1000} max={500000} step={1000} value={maxPrice}
-                                            onChange={e => {
-                                                const val = Number(e.target.value);
-                                                setMaxPrice(val);
-                                                if (priceTimer) clearTimeout(priceTimer);
-                                                const timer = setTimeout(() => { setCurrentPage(1); fetchHotels(searchCity, val, filterStars, 1, sortBy); }, 500);
-                                                setPriceTimer(timer);
-                                            }}
-                                            className="w-full accent-blue-600"
-                                        />
-                                        <div className="flex justify-between text-xs text-gray-400 mt-1">
-                                            <span>1 000 ₸</span>
-                                            <span>500 000 ₸</span>
+                        {hotels.length === 0 ? (
+                            <div className="bg-white rounded-lg border p-12 text-center">
+                                <p className="text-gray-400 text-lg">Ничего не найдено</p>
+                                <p className="text-gray-400 text-sm mt-1">Попробуйте изменить фильтры</p>
+                            </div>
+                        ) : (
+                            <div className="flex flex-col gap-4">
+                                {hotels.map(h => (
+                                    <div key={h.id} className="bg-white rounded-lg border shadow-sm hover:shadow-md transition-shadow flex overflow-hidden">
+                                        <div className="w-48 shrink-0 bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center overflow-hidden">
+                                            {h.imageUrl ? (
+                                                <img src={h.imageUrl} alt={h.name} className="w-full h-full object-cover" />
+                                            ) : (
+                                                <span className="text-blue-300 font-bold text-lg text-center px-2">{h.name}</span>
+                                            )}
                                         </div>
-                                    </div>
-                                    <div className="mb-5">
-                                        <p className="text-sm font-semibold text-gray-700 mb-2">Звёзды</p>
-                                        <div className="flex flex-col gap-2">
-                                            {[5, 4, 3, 2, 1].map(star => (
-                                                <button
-                                                    key={star}
-                                                    onClick={() => handleStarsFilter(star)}
-                                                    className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition ${filterStars === star ? 'bg-blue-50 border-blue-500 text-blue-700' : 'border-gray-200 hover:bg-gray-50'}`}
-                                                >
-                                                    <span className="text-yellow-400">{'★'.repeat(star)}{'☆'.repeat(5 - star)}</span>
-                                                    <span>{star} звезды</span>
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                    <button onClick={handleReset} className="w-full text-sm text-blue-600 border border-blue-200 rounded py-2 hover:bg-blue-50 transition">
-                                        Сбросить фильтры
-                                    </button>
-                                </div>
-                            </aside>
-
-                            {/* СПИСОК ОТЕЛЕЙ */}
-                            <div className="flex-1">
-                                <div className="flex justify-between items-center mb-4">
-                                    <h2 className="text-xl font-bold text-gray-800">
-                                        {searchCity ? `Отели в городе "${searchCity}"` : 'Все отели Казахстана'}
-                                        <span className="text-sm font-normal text-gray-500 ml-2">{totalCount} вариантов</span>
-                                    </h2>
-                                    <select
-                                        value={sortBy}
-                                        onChange={e => { setSortBy(e.target.value); setCurrentPage(1); fetchHotels(searchCity, maxPrice, filterStars, 1, e.target.value); }}
-                                        className="text-sm border border-gray-300 rounded-lg px-3 py-2 outline-none focus:border-blue-500 bg-white"
-                                    >
-                                        <option value="">По умолчанию</option>
-                                        <option value="price_asc">Цена: по возрастанию</option>
-                                        <option value="price_desc">Цена: по убыванию</option>
-                                        <option value="stars_desc">Звёзды: 5 → 1</option>
-                                        <option value="stars_asc">Звёзды: 1 → 5</option>
-                                    </select>
-                                </div>
-
-                                {hotels.length === 0 ? (
-                                    <div className="bg-white rounded-lg border p-12 text-center">
-                                        <p className="text-gray-400 text-lg">Ничего не найдено</p>
-                                        <p className="text-gray-400 text-sm mt-1">Попробуйте изменить фильтры</p>
-                                    </div>
-                                ) : (
-                                    <div className="flex flex-col gap-4">
-                                        {hotels.map(h => (
-                                            <div key={h.id} className="bg-white rounded-lg border shadow-sm hover:shadow-md transition-shadow flex overflow-hidden">
-                                                {/* Фото */}
-                                                <div className="w-48 shrink-0 bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center overflow-hidden">
-                                                    {h.imageUrl ? (
-                                                        <img src={h.imageUrl} alt={h.name} className="w-full h-full object-cover" />
-                                                    ) : (
-                                                        <span className="text-blue-300 font-bold text-lg text-center px-2">{h.name}</span>
+                                        <div className="flex-1 p-4 flex flex-col justify-between">
+                                            <div>
+                                                <div className="flex items-start justify-between">
+                                                    <div>
+                                                        <h3 className="text-lg font-bold text-blue-700">{h.name}</h3>
+                                                        <p className="text-sm text-gray-500 mt-0.5">📍 {h.city}</p>
+                                                        <div className="flex items-center gap-2 mt-1">
+                                                            <span className="text-yellow-400 text-sm">{'★'.repeat(h.stars)}{'☆'.repeat(5 - h.stars)}</span>
+                                                            <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded">{h.propertyType}</span>
+                                                        </div>
+                                                        {checkIn && checkOut && (
+                                                            <div className="mt-1">
+                                                                <AvailabilityBadge hotelId={h.id} checkIn={checkIn} checkOut={checkOut} />
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded shrink-0">
+                                                        {h.totalRooms} номеров
+                                                    </span>
+                                                </div>
+                                                <p className="text-sm text-gray-600 mt-2 line-clamp-2">
+                                                    {h.description && h.description.trim() !== "" ? h.description : "Описание отсутствует"}
+                                                </p>
+                                            </div>
+                                            <div className="flex justify-between items-end mt-4">
+                                                <div>
+                                                    {checkIn && checkOut && (
+                                                        <p className="text-xs text-gray-400">{checkIn} — {checkOut} · {guests} гост.</p>
                                                     )}
                                                 </div>
-                                                <div className="flex-1 p-4 flex flex-col justify-between">
-                                                    <div>
-                                                        <div className="flex items-start justify-between">
-                                                            <div>
-                                                                <h3 className="text-lg font-bold text-blue-700">{h.name}</h3>
-                                                                <p className="text-sm text-gray-500 mt-0.5">📍 {h.city}</p>
-                                                                <p className="text-yellow-400 text-sm mt-1">
-                                                                    {'★'.repeat(h.stars)}{'☆'.repeat(5 - h.stars)}
-                                                                </p>
-                                                                {/* ДОСТУПНОСТЬ */}
-                                                                {checkIn && checkOut && (
-                                                                    <div className="mt-1">
-                                                                        <AvailabilityBadge
-                                                                            hotelId={h.id}
-                                                                            checkIn={checkIn}
-                                                                            checkOut={checkOut}
-                                                                        />
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                            <span className="text-xs text-gray-400 bg-gray-100 px-2 py-1 rounded">
-                                                                {h.totalRooms} номеров
-                                                            </span>
-                                                        </div>
-                                                        <p className="text-sm text-gray-600 mt-2 line-clamp-2">
-                                                            {h.description && h.description.trim() !== "" ? h.description : "Описание отсутствует"}
-                                                        </p>
-                                                    </div>
-                                                    <div className="flex justify-between items-end mt-4">
-                                                        <div>
-                                                            {checkIn && checkOut && (
-                                                                <p className="text-xs text-gray-400">{checkIn} — {checkOut} · {guests} гост.</p>
-                                                            )}
-                                                        </div>
-                                                        <div className="text-right">
-                                                            <p className="text-2xl font-bold text-gray-900">{h.pricePerNight.toLocaleString()} ₸</p>
-                                                            <p className="text-xs text-gray-400 mb-2">за ночь</p>
-                                                            <button
-                                                                onClick={() => {
-                                                                    setHotelPageHotel(h);
-                                                                    setView('hotel-page');
-                                                                }}
-                                                                className="bg-[#0071c2] hover:bg-[#005999] text-white text-sm font-bold px-5 py-2 rounded transition"
-                                                            >
-                                                                Смотреть
-                                                            </button>
-                                                        </div>
-                                                    </div>
+                                                <div className="text-right">
+                                                    <p className="text-2xl font-bold text-gray-900">{h.pricePerNight.toLocaleString()} ₸</p>
+                                                    <p className="text-xs text-gray-400 mb-2">за ночь</p>
+                                                    <button
+                                                        onClick={() => navigate(`/hotels/${h.id}`)}
+                                                        className="bg-[#0071c2] hover:bg-[#005999] text-white text-sm font-bold px-5 py-2 rounded transition"
+                                                    >
+                                                        Смотреть
+                                                    </button>
                                                 </div>
                                             </div>
-                                        ))}
+                                        </div>
                                     </div>
-                                )}
-
-                                {/* ПАГИНАЦИЯ */}
-                                {totalPages > 1 && (
-                                    <div className="flex justify-center items-center gap-2 mt-6">
-                                        <button
-                                            onClick={() => { const p = currentPage - 1; setCurrentPage(p); fetchHotels(searchCity, maxPrice, filterStars, p, sortBy); }}
-                                            disabled={currentPage === 1}
-                                            className="px-4 py-2 rounded border text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 transition"
-                                        >← Назад</button>
-                                        {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
-                                            <button
-                                                key={p}
-                                                onClick={() => { setCurrentPage(p); fetchHotels(searchCity, maxPrice, filterStars, p, sortBy); }}
-                                                className={`w-10 h-10 rounded border text-sm font-medium transition ${currentPage === p ? 'bg-[#003580] text-white border-[#003580]' : 'hover:bg-gray-50'}`}
-                                            >{p}</button>
-                                        ))}
-                                        <button
-                                            onClick={() => { const p = currentPage + 1; setCurrentPage(p); fetchHotels(searchCity, maxPrice, filterStars, p, sortBy); }}
-                                            disabled={currentPage === totalPages}
-                                            className="px-4 py-2 rounded border text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 transition"
-                                        >Вперёд →</button>
-                                    </div>
-                                )}
+                                ))}
                             </div>
-                        </div>
+                        )}
+
+                        {/* ПАГИНАЦИЯ */}
+                        {totalPages > 1 && (
+                            <div className="flex justify-center items-center gap-2 mt-6">
+                                <button
+                                    onClick={() => { const p = currentPage - 1; setCurrentPage(p); fetchHotels(searchCity, maxPrice, filterStars, p, sortBy); }}
+                                    disabled={currentPage === 1}
+                                    className="px-4 py-2 rounded border text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 transition"
+                                >← Назад</button>
+                                {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+                                    <button
+                                        key={p}
+                                        onClick={() => { setCurrentPage(p); fetchHotels(searchCity, maxPrice, filterStars, p, sortBy); }}
+                                        className={`w-10 h-10 rounded border text-sm font-medium transition ${currentPage === p ? 'bg-[#003580] text-white border-[#003580]' : 'hover:bg-gray-50'}`}
+                                    >{p}</button>
+                                ))}
+                                <button
+                                    onClick={() => { const p = currentPage + 1; setCurrentPage(p); fetchHotels(searchCity, maxPrice, filterStars, p, sortBy); }}
+                                    disabled={currentPage === totalPages}
+                                    className="px-4 py-2 rounded border text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 transition"
+                                >Вперёд →</button>
+                            </div>
+                        )}
                     </div>
-                </>
-            )}
+                </div>
+            </div>
+        </>
+    );
+
+    return (
+        <div className="min-h-screen bg-gray-100">
+            <Navbar />
+            <Routes>
+                <Route path="/" element={<HomePage />} />
+                <Route path="/login" element={
+                    <main className="container mx-auto py-8 px-4">
+                        <Login onLoginSuccess={(userData) => {
+                            setUser(userData);
+                            fetchHotels();
+                            navigate('/');
+                        }} />
+                    </main>
+                } />
+                <Route path="/register" element={
+                    <main className="container mx-auto py-8 px-4">
+                        <Register />
+                    </main>
+                } />
+                <Route path="/add-hotel" element={
+                    <main className="container mx-auto py-8 px-4">
+                        {user ? (
+                            <AddHotel ownerEmail={user.email} onSuccess={() => { fetchHotels(); navigate('/'); }} />
+                        ) : (
+                            <p className="text-center text-gray-500">Нет доступа</p>
+                        )}
+                    </main>
+                } />
+                <Route path="/my-bookings" element={
+                    <main className="container mx-auto py-8 px-4">
+                        <MyBookings />
+                    </main>
+                } />
+                <Route path="/owner-dashboard" element={
+                    <main className="container mx-auto py-8 px-4">
+                        <OwnerDashboard />
+                    </main>
+                } />
+                <Route path="/hotels/:id" element={
+                    <HotelPageWrapper
+                        hotels={hotels}
+                        checkIn={checkIn}
+                        checkOut={checkOut}
+                        guests={guests}
+                    />
+                } />
+            </Routes>
         </div>
-    )
+    );
 }
 
 export default App

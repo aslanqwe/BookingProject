@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import {useEffect, useState} from 'react';
 import axios from 'axios';
 
 interface Booking {
@@ -67,13 +67,21 @@ export default function MyBookings() {
             ) : (
                 <div className="flex flex-col gap-4">
                     {bookings.map(b => (
-                        <div key={b.id} className={`bg-white rounded-xl border shadow-sm overflow-hidden ${b.status === 'Cancelled' ? 'opacity-60' : ''}`}>
-                            <div className={`px-6 py-3 flex justify-between items-center ${b.status === 'Cancelled' ? 'bg-gray-400' : 'bg-[#003580]'}`}>
+                        <div key={b.id}
+                             className={`bg-white rounded-xl border shadow-sm overflow-hidden ${b.status === 'Cancelled' ? 'opacity-60' : ''}`}>
+                            <div
+                                className={`px-6 py-3 flex justify-between items-center ${b.status === 'Cancelled' ? 'bg-gray-400' : 'bg-[#003580]'}`}>
                                 <span className="text-white font-bold">{b.hotelName}</span>
                                 <div className="flex items-center gap-3">
                                     <span className="text-blue-200 text-sm">📍 {b.city}</span>
-                                    <span className={`text-xs font-bold px-2 py-1 rounded-full ${b.status === 'Active' ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-600'}`}>
-                                        {b.status === 'Active' ? 'Активна' : 'Отменена'}
+                                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                                        b.status === 'Active'
+                                            ? 'bg-green-100 text-green-700'
+                                            : b.status === 'Completed'
+                                                ? 'bg-gray-100 text-gray-600'
+                                                : 'bg-red-100 text-red-500'
+                                    }`}>
+                                        {b.status === 'Active' ? 'Активна' : b.status === 'Completed' ? 'Завершена' : 'Отменена'}
                                     </span>
                                 </div>
                             </div>
@@ -101,7 +109,7 @@ export default function MyBookings() {
                                         {b.status === 'Active' && (
                                             <button
                                                 onClick={() => handleCancel(b.id)}
-                                                className="text-sm text-red-500 border border-red-300 px-3 py-1.5 rounded-lg hover:bg-red-50 transition"
+                                                className="text-sm border border-red-300 text-red-500 px-4 py-1.5 rounded hover:bg-red-50 transition"
                                             >
                                                 Отменить
                                             </button>

@@ -171,8 +171,14 @@ export default function OwnerDashboard() {
                                         <div key={b.id} className={`px-6 py-4 flex justify-between items-center ${b.status === 'Cancelled' ? 'opacity-50' : ''}`}>
                                             <div>
                                                 <div className="flex items-center gap-2 mb-1">
-                                                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${b.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                                                        {b.status === 'Active' ? 'Активна' : 'Отменена'}
+                                                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                                                        b.status === 'Active'
+                                                            ? 'bg-green-100 text-green-700'
+                                                            : b.status === 'Completed'
+                                                                ? 'bg-gray-100 text-gray-600'
+                                                                : 'bg-red-100 text-red-500'
+                                                    }`}>
+                                                        {b.status === 'Active' ? 'Активна' : b.status === 'Completed' ? 'Завершена' : 'Отменена'}
                                                     </span>
                                                     <span className="text-xs text-gray-400">Оформлено {formatDate(b.createdAt)}</span>
                                                 </div>

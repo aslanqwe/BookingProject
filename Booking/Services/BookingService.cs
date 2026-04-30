@@ -100,24 +100,40 @@ public class BookingService : IBookingService
 
     public async Task<IEnumerable<BookingDto>> GetMyBookingsAsync(string userId)
     {
-        return await _context.Bookings
+        var bookings = await _context.Bookings
             .Include(b => b.Hotel)
+            .Include(b => b.RoomType)
             .Where(b => b.UserId == userId)
             .OrderByDescending(b => b.CreatedAt)
-            .Select(b => new BookingDto
-            {
-                Id = b.Id,
-                HotelId = b.Hotel.Id,
-                HotelName = b.Hotel.Name,
-                City = b.Hotel.City,
-                CheckIn = b.CheckIn,
-                CheckOut = b.CheckOut,
-                Guests = b.Guests,
-                TotalPrice = b.TotalPrice,
-                Status = b.Status,
-                CreatedAt = b.CreatedAt
-            })
             .ToListAsync();
+
+        var now = DateTime.UtcNow;
+
+        // Автоматическое завершение просроченных брони в БД
+        var expired = bookings.Where(b => b.Status == "Active" && b.CheckOut < now).ToList();
+        if (expired.Any())
+        {
+            foreach (var b in expired)
+                b.Status = "Completed";
+            await _context.SaveChangesAsync();
+        }
+
+        return bookings.Select(b => new BookingDto
+        {
+            Id = b.Id,
+            HotelId = b.Hotel.Id,
+            HotelName = b.Hotel.Name,
+            City = b.Hotel.City,
+            RoomTypeId = b.RoomTypeId,
+            RoomTypeName = b.RoomType?.Name,
+            CheckIn = b.CheckIn,
+            CheckOut = b.CheckOut,
+            Guests = b.Guests,
+            Rooms = b.Rooms,
+            TotalPrice = b.TotalPrice,
+            Status = b.Status,
+            CreatedAt = b.CreatedAt
+        });
     }
 
     public async Task CancelAsync(int bookingId, string userId)
@@ -133,23 +149,37 @@ public class BookingService : IBookingService
 
     public async Task<IEnumerable<BookingDto>> GetBookingsForOwnerAsync(string ownerId)
     {
-        return await _context.Bookings
+        var bookings = await _context.Bookings
             .Include(b => b.Hotel)
+            .Include(b => b.RoomType)
             .Where(b => b.Hotel.OwnerId == ownerId)
             .OrderByDescending(b => b.CreatedAt)
-            .Select(b => new BookingDto
-            {
-                Id = b.Id,
-                HotelId = b.Hotel.Id,
-                HotelName = b.Hotel.Name,
-                City = b.Hotel.City,
-                CheckIn = b.CheckIn,
-                CheckOut = b.CheckOut,
-                Guests = b.Guests,
-                TotalPrice = b.TotalPrice,
-                Status = b.Status,
-                CreatedAt = b.CreatedAt
-            })
             .ToListAsync();
+
+        var now = DateTime.UtcNow;
+        var expired = bookings.Where(b => b.Status == "Active" && b.CheckOut < now).ToList();
+        if (expired.Any())
+        {
+            foreach (var b in expired)
+                b.Status = "Completed";
+            await _context.SaveChangesAsync();
+        }
+
+        return bookings.Select(b => new BookingDto
+        {
+            Id = b.Id,
+            HotelId = b.Hotel.Id,
+            HotelName = b.Hotel.Name,
+            City = b.Hotel.City,
+            RoomTypeId = b.RoomTypeId,
+            RoomTypeName = b.RoomType?.Name,
+            CheckIn = b.CheckIn,
+            CheckOut = b.CheckOut,
+            Guests = b.Guests,
+            Rooms = b.Rooms,
+            TotalPrice = b.TotalPrice,
+            Status = b.Status,
+            CreatedAt = b.CreatedAt
+        });
     }
 }
