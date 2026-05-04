@@ -31,12 +31,14 @@ interface User {
     role: string;
 }
 
-function HotelPageWrapper({ hotels, checkIn, checkOut, guests }: {
+// ============ ВЫНЕСЕНО ИЗ App ============
+
+const HotelPageWrapper = ({ hotels, checkIn, checkOut, guests }: {
     hotels: Hotel[];
     checkIn: string;
     checkOut: string;
     guests: number;
-}) {
+}) => {
     const { id } = useParams();
     const navigate = useNavigate();
     const [hotel, setHotel] = useState<Hotel | null>(null);
@@ -73,39 +75,77 @@ function HotelPageWrapper({ hotels, checkIn, checkOut, guests }: {
             onBookingSuccess={() => {}}
         />
     );
-}
+};
 
-function App() {
-    const navigate = useNavigate()
-    const [hotels, setHotels] = useState<Hotel[]>([])
-    const [user, setUser] = useState<User | null>(null)
-    const [loading, setLoading] = useState(true)
-    const [searchCity, setSearchCity] = useState('')
-    const [checkIn, setCheckIn] = useState('')
-    const [checkOut, setCheckOut] = useState('')
-    const [guests, setGuests] = useState(2)
-    const [rooms, setRooms] = useState(1)
-    const [isGuestMenuOpen, setIsGuestMenuOpen] = useState(false)
-    const guestMenuRef = useRef<HTMLDivElement>(null)
-    const [maxPrice, setMaxPrice] = useState(500000)
-    const [filterStars, setFilterStars] = useState(0)
-    const [priceTimer, setPriceTimer] = useState<ReturnType<typeof setTimeout> | null>(null)
-    const [currentPage, setCurrentPage] = useState(1)
-    const [totalPages, setTotalPages] = useState(1)
-    const [totalCount, setTotalCount] = useState(0)
-    const PAGE_SIZE = 5
-    const [sortBy, setSortBy] = useState('')
+const Navbar = ({ user, onLogout, onNavigate }: {
+    user: User | null;
+    onLogout: () => void;
+    onNavigate: (path: string) => void;
+}) => (
+    <nav className="bg-[#003580] text-white shadow-md">
+        <div className="container mx-auto px-4">
+            <div className="flex justify-between items-center h-16">
+                <h1
+                    className="text-2xl font-bold cursor-pointer tracking-tight"
+                    onClick={() => onNavigate('/')}
+                >
+                    Booking.kz
+                </h1>
+                <div className="flex items-center gap-3">
+                    {!user ? (
+                        <>
+                            <button onClick={() => onNavigate('/login')} className="text-sm font-medium px-4 py-2 rounded border border-white/40 hover:bg-white/10 transition">Войти</button>
+                            <button onClick={() => onNavigate('/register')} className="text-sm font-bold px-4 py-2 rounded bg-white text-[#003580] hover:bg-gray-100 transition">Зарегистрироваться</button>
+                        </>
+                    ) : (
+                        <>
+                            <span className="text-sm text-blue-200 hidden md:block">
+                                {user.email} <strong className="text-white">({user.role})</strong>
+                            </span>
+                            <button onClick={() => onNavigate('/my-bookings')} className="text-sm font-medium px-4 py-2 rounded border border-white/40 hover:bg-white/10 transition">Мои брони</button>
+                            {user.role === 'Owner' && (
+                                <>
+                                    <button onClick={() => onNavigate('/owner-dashboard')} className="text-sm font-medium px-4 py-2 rounded border border-white/40 hover:bg-white/10 transition">Мои отели</button>
+                                    <button onClick={() => onNavigate('/add-hotel')} className="text-sm font-bold px-4 py-2 rounded bg-green-500 hover:bg-green-600 transition">+ Добавить</button>
+                                </>
+                            )}
+                            <button onClick={onLogout} className="text-sm px-4 py-2 rounded border border-white/40 hover:bg-white/10 transition">Выйти</button>
+                        </>
+                    )}
+                </div>
+            </div>
+        </div>
+    </nav>
+);
 
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (guestMenuRef.current && !guestMenuRef.current.contains(event.target as Node)) {
-                setIsGuestMenuOpen(false);
-            }
-        };
-        document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
-
+const HomePage = ({
+                      hotels, searchCity, setSearchCity,
+                      checkIn, setCheckIn, checkOut, setCheckOut,
+                      guests, setGuests, rooms, setRooms,
+                      maxPrice, setMaxPrice, filterStars, sortBy, setSortBy,
+                      currentPage, totalPages, totalCount,
+                      isGuestMenuOpen, setIsGuestMenuOpen, guestMenuRef,
+                      priceTimer, setPriceTimer,
+                      fetchHotels, handleReset, handleStarsFilter, navigate
+                  }: {
+    hotels: Hotel[];
+    searchCity: string; setSearchCity: (v: string) => void;
+    checkIn: string; setCheckIn: (v: string) => void;
+    checkOut: string; setCheckOut: (v: string) => void;
+    guests: number; setGuests: React.Dispatch<React.SetStateAction<number>>;
+    rooms: number; setRooms: React.Dispatch<React.SetStateAction<number>>;
+    maxPrice: number; setMaxPrice: (v: number) => void;
+    filterStars: number; sortBy: string; setSortBy: (v: string) => void;
+    currentPage: number; totalPages: number; totalCount: number;
+    isGuestMenuOpen: boolean; setIsGuestMenuOpen: (v: boolean) => void;
+    guestMenuRef: React.RefObject<HTMLDivElement>;
+    priceTimer: ReturnType<typeof setTimeout> | null;
+    setPriceTimer: (v: ReturnType<typeof setTimeout> | null) => void;
+    fetchHotels: (city?: string, price?: number, stars?: number, page?: number, sort?: string) => void;
+    handleReset: () => void;
+    handleStarsFilter: (s: number) => void;
+    navigate: (path: string) => void;
+}) => {
     const getRoomsText = (count: number) => {
         const lastDigit = count % 10;
         const lastTwoDigits = count % 100;
@@ -115,125 +155,8 @@ function App() {
         return `${count} номеров`;
     };
 
-    const fetchHotels = (city = searchCity, price = maxPrice, stars = filterStars, page = 1, sort = sortBy) => {
-        axios.get('/api/hotels', {
-            params: {
-                city: city.trim() || undefined,
-                maxPrice: price < 500000 ? price : undefined,
-                stars: stars > 0 ? stars : undefined,
-                checkIn: checkIn || undefined,
-                checkOut: checkOut || undefined,
-                guests: guests,
-                rooms: rooms,
-                page,
-                pageSize: PAGE_SIZE,
-                sortBy: sort || undefined
-            }
-        })
-            .then(res => {
-                setHotels(res.data.hotels)
-                setTotalPages(res.data.totalPages)
-                setTotalCount(res.data.totalCount)
-                setCurrentPage(res.data.currentPage)
-            })
-            .catch(err => console.error(err))
-    }
-
-    useEffect(() => {
-        axios.get('/api/auth/me')
-            .then(res => {
-                const userData = { email: res.data.email, role: res.data.role };
-                setUser(userData);
-                localStorage.setItem('user', JSON.stringify(userData));
-            })
-            .catch(() => {
-                localStorage.removeItem('user');
-                setUser(null);
-            })
-            .finally(() => setLoading(false));
-        fetchHotels();
-    }, [])
-
-    const handleLogout = async () => {
-        await axios.post('/api/auth/logout');
-        localStorage.removeItem('user');
-        setUser(null);
-        navigate('/');
-    };
-
-    const handleReset = () => {
-        setSearchCity('');
-        setMaxPrice(500000);
-        setCheckIn('');
-        setCheckOut('');
-        setGuests(2);
-        setRooms(1);
-        setFilterStars(0);
-        setCurrentPage(1);
-        setSortBy('');
-        fetchHotels('', 500000, 0, 1, '');
-    };
-
-    const handleStarsFilter = (stars: number) => {
-        const newStars = filterStars === stars ? 0 : stars;
-        setFilterStars(newStars);
-        setCurrentPage(1);
-        fetchHotels(searchCity, maxPrice, newStars, 1, sortBy);
-    };
-
-    // Шапка — общая для всех страниц
-    const Navbar = () => (
-        <nav className="bg-[#003580] text-white shadow-md">
-            <div className="container mx-auto px-4">
-                <div className="flex justify-between items-center h-16">
-                    <h1
-                        className="text-2xl font-bold cursor-pointer tracking-tight"
-                        onClick={() => { navigate('/'); fetchHotels(); }}
-                    >
-                        Booking.kz
-                    </h1>
-                    <div className="flex items-center gap-3">
-                        {!user ? (
-                            <>
-                                <button onClick={() => navigate('/login')} className="text-sm font-medium px-4 py-2 rounded border border-white/40 hover:bg-white/10 transition">Войти</button>
-                                <button onClick={() => navigate('/register')} className="text-sm font-bold px-4 py-2 rounded bg-white text-[#003580] hover:bg-gray-100 transition">Зарегистрироваться</button>
-                            </>
-                        ) : (
-                            <>
-                                <span className="text-sm text-blue-200 hidden md:block">
-                                    {user.email} <strong className="text-white">({user.role})</strong>
-                                </span>
-                                <button onClick={() => navigate('/my-bookings')} className="text-sm font-medium px-4 py-2 rounded border border-white/40 hover:bg-white/10 transition">Мои брони</button>
-                                {user.role === 'Owner' && (
-                                    <>
-                                        <button onClick={() => navigate('/owner-dashboard')} className="text-sm font-medium px-4 py-2 rounded border border-white/40 hover:bg-white/10 transition">Мои отели</button>
-                                        <button onClick={() => navigate('/add-hotel')} className="text-sm font-bold px-4 py-2 rounded bg-green-500 hover:bg-green-600 transition">+ Добавить</button>
-                                    </>
-                                )}
-                                <button onClick={handleLogout} className="text-sm px-4 py-2 rounded border border-white/40 hover:bg-white/10 transition">Выйти</button>
-                            </>
-                        )}
-                    </div>
-                </div>
-            </div>
-        </nav>
-    );
-
-    if (loading) {
-        return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <div className="text-center">
-                    <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                    <p className="text-gray-500 text-lg">Загрузка...</p>
-                </div>
-            </div>
-        );
-    }
-
-    // Главная страница
-    const HomePage = () => (
+    return (
         <>
-            {/* ГЕРОБЛОК */}
             <div className="bg-[#003580] pb-16 pt-8">
                 <div className="container mx-auto px-4">
                     <h2 className="text-3xl font-bold text-white mb-1">Отели в Казахстане</h2>
@@ -327,7 +250,7 @@ function App() {
                                 )}
                             </div>
                             <button
-                                onClick={() => { setCurrentPage(1); fetchHotels(searchCity, maxPrice, filterStars, 1, sortBy); }}
+                                onClick={() => fetchHotels(searchCity, maxPrice, filterStars, 1, sortBy)}
                                 className="bg-[#0071c2] hover:bg-[#005999] text-white font-bold px-8 py-3 rounded-r-md transition text-sm whitespace-nowrap"
                             >
                                 Найти
@@ -337,10 +260,8 @@ function App() {
                 </div>
             </div>
 
-            {/* КОНТЕНТ */}
             <div className="container mx-auto px-4 py-8">
                 <div className="flex flex-col lg:flex-row gap-6">
-                    {/* ФИЛЬТРЫ */}
                     <aside className="lg:w-64 shrink-0">
                         <div className="bg-white rounded-lg shadow-sm border p-4">
                             <h3 className="font-bold text-gray-800 mb-4">Фильтры</h3>
@@ -354,7 +275,7 @@ function App() {
                                         const val = Number(e.target.value);
                                         setMaxPrice(val);
                                         if (priceTimer) clearTimeout(priceTimer);
-                                        const timer = setTimeout(() => { setCurrentPage(1); fetchHotels(searchCity, val, filterStars, 1, sortBy); }, 500);
+                                        const timer = setTimeout(() => fetchHotels(searchCity, val, filterStars, 1, sortBy), 500);
                                         setPriceTimer(timer);
                                     }}
                                     className="w-full accent-blue-600"
@@ -384,7 +305,6 @@ function App() {
                         </div>
                     </aside>
 
-                    {/* СПИСОК ОТЕЛЕЙ */}
                     <div className="flex-1">
                         <div className="flex justify-between items-center mb-4">
                             <h2 className="text-xl font-bold text-gray-800">
@@ -393,7 +313,7 @@ function App() {
                             </h2>
                             <select
                                 value={sortBy}
-                                onChange={e => { setSortBy(e.target.value); setCurrentPage(1); fetchHotels(searchCity, maxPrice, filterStars, 1, e.target.value); }}
+                                onChange={e => { setSortBy(e.target.value); fetchHotels(searchCity, maxPrice, filterStars, 1, e.target.value); }}
                                 className="text-sm border border-gray-300 rounded-lg px-3 py-2 outline-none focus:border-blue-500 bg-white"
                             >
                                 <option value="">По умолчанию</option>
@@ -467,23 +387,22 @@ function App() {
                             </div>
                         )}
 
-                        {/* ПАГИНАЦИЯ */}
                         {totalPages > 1 && (
                             <div className="flex justify-center items-center gap-2 mt-6">
                                 <button
-                                    onClick={() => { const p = currentPage - 1; setCurrentPage(p); fetchHotels(searchCity, maxPrice, filterStars, p, sortBy); }}
+                                    onClick={() => fetchHotels(searchCity, maxPrice, filterStars, currentPage - 1, sortBy)}
                                     disabled={currentPage === 1}
                                     className="px-4 py-2 rounded border text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 transition"
                                 >← Назад</button>
                                 {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
                                     <button
                                         key={p}
-                                        onClick={() => { setCurrentPage(p); fetchHotels(searchCity, maxPrice, filterStars, p, sortBy); }}
+                                        onClick={() => fetchHotels(searchCity, maxPrice, filterStars, p, sortBy)}
                                         className={`w-10 h-10 rounded border text-sm font-medium transition ${currentPage === p ? 'bg-[#003580] text-white border-[#003580]' : 'hover:bg-gray-50'}`}
                                     >{p}</button>
                                 ))}
                                 <button
-                                    onClick={() => { const p = currentPage + 1; setCurrentPage(p); fetchHotels(searchCity, maxPrice, filterStars, p, sortBy); }}
+                                    onClick={() => fetchHotels(searchCity, maxPrice, filterStars, currentPage + 1, sortBy)}
                                     disabled={currentPage === totalPages}
                                     className="px-4 py-2 rounded border text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 transition"
                                 >Вперёд →</button>
@@ -494,12 +413,146 @@ function App() {
             </div>
         </>
     );
+};
+
+// ============ APP ============
+function App() {
+    const navigate = useNavigate()
+    const [hotels, setHotels] = useState<Hotel[]>([])
+    const [user, setUser] = useState<User | null>(null)
+    const [loading, setLoading] = useState(true)
+    const [searchCity, setSearchCity] = useState('')
+    const [checkIn, setCheckIn] = useState('')
+    const [checkOut, setCheckOut] = useState('')
+    const [guests, setGuests] = useState(2)
+    const [rooms, setRooms] = useState(1)
+    const [isGuestMenuOpen, setIsGuestMenuOpen] = useState(false)
+    const guestMenuRef = useRef<HTMLDivElement>(null)
+    const [maxPrice, setMaxPrice] = useState(500000)
+    const [filterStars, setFilterStars] = useState(0)
+    const [priceTimer, setPriceTimer] = useState<ReturnType<typeof setTimeout> | null>(null)
+    const [currentPage, setCurrentPage] = useState(1)
+    const [totalPages, setTotalPages] = useState(1)
+    const [totalCount, setTotalCount] = useState(0)
+    const PAGE_SIZE = 5
+    const [sortBy, setSortBy] = useState('')
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (guestMenuRef.current && !guestMenuRef.current.contains(event.target as Node)) {
+                setIsGuestMenuOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    const fetchHotels = (city = searchCity, price = maxPrice, stars = filterStars, page = 1, sort = sortBy) => {
+        axios.get('/api/hotels', {
+            params: {
+                city: city.trim() || undefined,
+                maxPrice: price < 500000 ? price : undefined,
+                stars: stars > 0 ? stars : undefined,
+                checkIn: checkIn || undefined,
+                checkOut: checkOut || undefined,
+                guests,
+                rooms,
+                page,
+                pageSize: PAGE_SIZE,
+                sortBy: sort || undefined
+            }
+        })
+            .then(res => {
+                setHotels(res.data.hotels)
+                setTotalPages(res.data.totalPages)
+                setTotalCount(res.data.totalCount)
+                setCurrentPage(res.data.currentPage)
+            })
+            .catch(err => console.error(err))
+    }
+
+    useEffect(() => {
+        axios.get('/api/auth/me')
+            .then(res => {
+                const userData = { email: res.data.email, role: res.data.role };
+                setUser(userData);
+                localStorage.setItem('user', JSON.stringify(userData));
+            })
+            .catch(() => {
+                localStorage.removeItem('user');
+                setUser(null);
+            })
+            .finally(() => setLoading(false));
+        fetchHotels();
+    }, []);
+
+    const handleLogout = async () => {
+        await axios.post('/api/auth/logout');
+        localStorage.removeItem('user');
+        setUser(null);
+        navigate('/');
+    };
+
+    const handleReset = () => {
+        setSearchCity('');
+        setMaxPrice(500000);
+        setCheckIn('');
+        setCheckOut('');
+        setGuests(2);
+        setRooms(1);
+        setFilterStars(0);
+        setCurrentPage(1);
+        setSortBy('');
+        fetchHotels('', 500000, 0, 1, '');
+    };
+
+    const handleStarsFilter = (stars: number) => {
+        const newStars = filterStars === stars ? 0 : stars;
+        setFilterStars(newStars);
+        setCurrentPage(1);
+        fetchHotels(searchCity, maxPrice, newStars, 1, sortBy);
+    };
+
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <p className="text-gray-500 text-lg">Загрузка...</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-gray-100">
-            <Navbar />
+            <Navbar user={user} onLogout={handleLogout} onNavigate={navigate} />
             <Routes>
-                <Route path="/" element={<HomePage />} />
+                <Route path="/" element={
+                    <HomePage
+                        hotels={hotels}
+                        searchCity={searchCity} setSearchCity={setSearchCity}
+                        checkIn={checkIn} setCheckIn={setCheckIn}
+                        checkOut={checkOut} setCheckOut={setCheckOut}
+                        guests={guests} setGuests={setGuests}
+                        rooms={rooms} setRooms={setRooms}
+                        maxPrice={maxPrice} setMaxPrice={setMaxPrice}
+                        filterStars={filterStars}
+                        sortBy={sortBy} setSortBy={setSortBy}
+                        currentPage={currentPage}
+                        totalPages={totalPages}
+                        totalCount={totalCount}
+                        isGuestMenuOpen={isGuestMenuOpen}
+                        setIsGuestMenuOpen={setIsGuestMenuOpen}
+                        guestMenuRef={guestMenuRef}
+                        priceTimer={priceTimer}
+                        setPriceTimer={setPriceTimer}
+                        fetchHotels={fetchHotels}
+                        handleReset={handleReset}
+                        handleStarsFilter={handleStarsFilter}
+                        navigate={navigate}
+                    />
+                } />
                 <Route path="/login" element={
                     <main className="container mx-auto py-8 px-4">
                         <Login onLoginSuccess={(userData) => {

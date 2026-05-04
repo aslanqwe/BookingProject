@@ -528,6 +528,13 @@ function RoomTypeRow({room, nights, amenityIcons, isSelected, onSelect, defaultR
     return (
         <tr className={`${isSelected ? 'bg-blue-50' : 'hover:bg-gray-50'} ${!isAvailable ? 'opacity-50' : ''} transition`}>
             <td className="px-6 py-5 align-top">
+                {room.imageUrl && (
+                    <img
+                        src={room.imageUrl}
+                        alt={room.name}
+                        className="w-full h-28 object-cover rounded-lg mb-3"
+                    />
+                )}
                 <p className="font-bold text-blue-700">{room.name}</p>
                 {room.description && (
                     <p className="text-xs text-gray-500 mt-1">{room.description}</p>

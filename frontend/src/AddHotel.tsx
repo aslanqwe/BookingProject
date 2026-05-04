@@ -199,7 +199,7 @@ export default function AddHotel({onSuccess, ownerEmail}: AddHotelProps) {
                     />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div>
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Базовая цена за ночь (₸)</label>
                         <input
@@ -209,19 +209,6 @@ export default function AddHotel({onSuccess, ownerEmail}: AddHotelProps) {
                             onChange={e => setFormData({...formData, pricePerNight: Number(e.target.value)})}
                             required
                             min={0}
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                            {formData.propertyType === 'Апартаменты' ? 'Кол-во объектов' : 'Кол-во номеров'}
-                        </label>
-                        <input
-                            type="number"
-                            className="w-full border rounded-lg p-2.5 text-sm outline-none focus:border-blue-500"
-                            value={formData.totalRooms}
-                            onChange={e => setFormData({...formData, totalRooms: Number(e.target.value)})}
-                            required
-                            min={1}
                         />
                     </div>
                 </div>

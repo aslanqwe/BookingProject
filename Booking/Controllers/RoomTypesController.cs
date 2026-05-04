@@ -19,7 +19,6 @@ public class RoomTypesController : ControllerBase
         _context = context;
     }
 
-    // Получить все типы номеров отеля с доступностью
     [HttpGet]
     public async Task<IActionResult> GetRoomTypes(
         int hotelId,
@@ -37,12 +36,15 @@ public class RoomTypesController : ControllerBase
             int bookedRooms = 0;
             if (checkIn.HasValue && checkOut.HasValue)
             {
+                var checkInUtc = DateTime.SpecifyKind(checkIn.Value, DateTimeKind.Utc);
+                var checkOutUtc = DateTime.SpecifyKind(checkOut.Value, DateTimeKind.Utc);
+
                 bookedRooms = await _context.Bookings
                     .Where(b =>
                         b.RoomTypeId == rt.Id &&
                         b.Status == "Active" &&
-                        b.CheckIn < checkOut.Value &&
-                        b.CheckOut > checkIn.Value)
+                        b.CheckIn < checkOutUtc &&
+                        b.CheckOut > checkInUtc)
                     .SumAsync(b => b.Rooms);
             }
 
@@ -64,7 +66,6 @@ public class RoomTypesController : ControllerBase
         return Ok(result);
     }
 
-    // Добавить тип номера (только владелец)
     [HttpPost]
     [Authorize(Roles = "Owner")]
     public async Task<IActionResult> CreateRoomType(int hotelId, [FromBody] RoomTypeDto dto)
@@ -94,7 +95,6 @@ public class RoomTypesController : ControllerBase
         return Ok(dto);
     }
 
-    // Удалить тип номера
     [HttpDelete("{id}")]
     [Authorize(Roles = "Owner")]
     public async Task<IActionResult> DeleteRoomType(int hotelId, int id)
