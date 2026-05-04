@@ -96,6 +96,9 @@ namespace Booking.Migrations
                     b.Property<string>("ImageUrl")
                         .HasColumnType("text");
 
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("text");

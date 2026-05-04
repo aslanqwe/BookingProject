@@ -115,7 +115,7 @@ public class HotelsController : ControllerBase
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         var hotels = await context.Hotels
             .Include(h => h.RoomTypes)
-            .Where(h => h.OwnerId == userId)
+            .Where(h => h.OwnerId == userId && !h.IsDeleted)
             .ToListAsync();
 
         var result = hotels.Select(h => new HotelDto
@@ -134,5 +134,18 @@ public class HotelsController : ControllerBase
         });
 
         return Ok(result);
+    }
+    
+    [HttpDelete("{id}")]
+    [Authorize(Roles = "Owner")]
+    public async Task<IActionResult> DeleteHotel(int id)
+    {
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+        var result = await _hotelService.DeleteAsync(id, userId);
+        if (!result) return NotFound(new { message = "Отель не найден или нет доступа" });
+
+        return Ok(new { message = "Отель удалён" });
     }
 }

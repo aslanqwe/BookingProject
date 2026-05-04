@@ -72,6 +72,16 @@ export default function OwnerDashboard() {
 
     const activeBookings = bookings.filter(b => b.status === 'Active').length;
 
+    const handleDelete = async (hotelId: number, hotelName: string) => {
+        if (!confirm(`Удалить "${hotelName}"? Все брони сохранятся в истории.`)) return;
+        try {
+            await axios.delete(`/api/hotels/${hotelId}`);
+            fetchData();
+        } catch (err: any) {
+            alert(err.response?.data?.message || 'Ошибка при удалении');
+        }
+    };
+    
     if (loading) return (
         <div className="flex justify-center py-20">
             <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
@@ -131,6 +141,12 @@ export default function OwnerDashboard() {
                                     className="px-4 py-2 bg-blue-600 text-white text-sm font-bold rounded-lg hover:bg-blue-700 transition"
                                 >
                                     ✏️ Изменить
+                                </button>
+                                <button
+                                    onClick={() => handleDelete(hotel.id, hotel.name)}
+                                    className="px-4 py-2 bg-red-500 text-white text-sm font-bold rounded-lg hover:bg-red-600 transition"
+                                >
+                                    🗑 Удалить
                                 </button>
                             </div>
 

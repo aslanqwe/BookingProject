@@ -13,6 +13,6 @@ public class Hotel
     public string PropertyType { get; set; } = "Отель"; // Отель, Апартаменты, Хостел, Гостевой дом
     public string? Address { get; set; }
     public string? HotelAmenities { get; set; }
-    
+    public bool IsDeleted { get; set; } = false;
     public ICollection<RoomType> RoomTypes { get; set; } = new List<RoomType>();
 }

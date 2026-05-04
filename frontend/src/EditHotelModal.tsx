@@ -31,7 +31,7 @@ const HOTEL_AMENITIES = [
 export default function EditHotelModal({hotel, onClose, onSuccess}: EditHotelModalProps) {
     const [formData, setFormData] = useState({
         name: "", city: "", address: "", description: "",
-        pricePerNight: 0, stars: 3, totalRooms: 10,
+        pricePerNight: 0, stars: 3,
         imageUrl: "", propertyType: "Отель",
         hotelAmenities: ""
     });
@@ -192,14 +192,6 @@ export default function EditHotelModal({hotel, onClose, onSuccess}: EditHotelMod
                                        value={formData.pricePerNight}
                                        onChange={e => setFormData({...formData, pricePerNight: Number(e.target.value)})}
                                        required min={0}/>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Кол-во номеров</label>
-                                <input type="number"
-                                       className="w-full border rounded-lg p-2.5 text-sm outline-none focus:border-blue-500"
-                                       value={formData.totalRooms}
-                                       onChange={e => setFormData({...formData, totalRooms: Number(e.target.value)})}
-                                       required min={1}/>
                             </div>
                         </div>
 

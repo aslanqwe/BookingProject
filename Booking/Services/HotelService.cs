@@ -18,7 +18,7 @@ public class HotelService : IHotelService
     {
         var h = await _context.Hotels
             .Include(h => h.RoomTypes)
-            .FirstOrDefaultAsync(h => h.Id == id);
+            .FirstOrDefaultAsync(h => h.Id == id && !h.IsDeleted);
         return h == null ? null : MapToDto(h);
     }
 
@@ -29,6 +29,7 @@ public class HotelService : IHotelService
     {
         var query = _context.Hotels
             .Include(h => h.RoomTypes)
+            .Where(h => !h.IsDeleted)
             .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(city))
@@ -137,4 +138,14 @@ public class HotelService : IHotelService
         HotelAmenities = h.HotelAmenities,
         TotalRooms = h.RoomTypes?.Sum(rt => rt.TotalRooms) ?? 0
     };
+    
+    public async Task<bool> DeleteAsync(int id, string ownerId)
+    {
+        var hotel = await _context.Hotels.FindAsync(id);
+        if (hotel == null || hotel.OwnerId != ownerId) return false;
+
+        hotel.IsDeleted = true;
+        await _context.SaveChangesAsync();
+        return true;
+    }
 }

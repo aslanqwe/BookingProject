@@ -36,6 +36,7 @@ const HotelModal: React.FC<HotelModalProps> = ({ hotel, onClose, checkIn: initia
         setSuccess(false);
     }, [hotel?.id]);
     
+    
     if (!hotel) return null;
 
     const nights = checkIn && checkOut
