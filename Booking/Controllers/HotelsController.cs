@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using Booking.Data;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 namespace Booking.Controllers;
@@ -24,25 +25,27 @@ public class HotelsController : ControllerBase
         [FromQuery] string? city,
         [FromQuery] decimal? maxPrice,
         [FromQuery] int? stars,
-        [FromQuery] DateTime? checkIn, 
-        [FromQuery] DateTime? checkOut, 
-        [FromQuery] int? guests, 
-        [FromQuery] int? rooms, 
+        [FromQuery] DateOnly? checkIn,
+        [FromQuery] DateOnly? checkOut,
+        [FromQuery] int? guests,
+        [FromQuery] int? rooms,
+        [FromQuery] string? propertyType,
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 5,
         [FromQuery] string? sortBy = null)
     {
         var (hotels, totalCount) = await _hotelService.GetAllAsync(
-            city, maxPrice, stars, checkIn, checkOut, guests, rooms, page, pageSize, sortBy);
+            city, maxPrice, stars, checkIn, checkOut, guests, rooms, page, pageSize, sortBy, propertyType);
 
-        return Ok(new {
+        return Ok(new
+        {
             hotels,
             totalCount,
             totalPages = (int)Math.Ceiling((double)totalCount / pageSize),
             currentPage = page
         });
     }
-    
+
     [HttpPost]
     [Authorize(Roles = "Owner")]
     public async Task<IActionResult> CreateHotel([FromBody] HotelDto hotelDto)
@@ -53,7 +56,7 @@ public class HotelsController : ControllerBase
         var result = await _hotelService.CreateAsync(hotelDto, userId);
         return Ok(result);
     }
-    
+
     [HttpGet("{id}")]
     public async Task<IActionResult> GetHotelById(int id)
     {
@@ -61,12 +64,12 @@ public class HotelsController : ControllerBase
         if (hotel == null) return NotFound();
         return Ok(hotel);
     }
-    
+
     [HttpGet("{id}/availability")]
     public async Task<IActionResult> GetAvailability(
         int id,
-        [FromQuery] DateTime checkIn,
-        [FromQuery] DateTime checkOut,
+        [FromQuery] DateOnly checkIn, 
+        [FromQuery] DateOnly checkOut,
         [FromServices] BookingDbContext context)
     {
         var hotel = await context.Hotels
@@ -80,7 +83,7 @@ public class HotelsController : ControllerBase
             .Where(b =>
                 b.HotelId == id &&
                 b.Status == "Active" &&
-                b.CheckIn < checkOut &&
+                b.CheckIn < checkOut && 
                 b.CheckOut > checkIn)
             .SumAsync(b => b.Rooms);
 
@@ -135,7 +138,27 @@ public class HotelsController : ControllerBase
 
         return Ok(result);
     }
-    
+
+    [HttpGet("{id}/owner-contact")]
+    [Authorize]
+    public async Task<IActionResult> GetOwnerContact(
+        int id,
+        [FromServices] BookingDbContext context,
+        [FromServices] UserManager<IdentityUser> userManager)
+    {
+        var hotel = await context.Hotels.FindAsync(id);
+        if (hotel == null || hotel.OwnerId == null) return NotFound();
+
+        var owner = await userManager.FindByIdAsync(hotel.OwnerId);
+        if (owner == null) return NotFound();
+
+        return Ok(new
+        {
+            phone = owner.PhoneNumber,
+            email = owner.Email
+        });
+    }
+
     [HttpDelete("{id}")]
     [Authorize(Roles = "Owner")]
     public async Task<IActionResult> DeleteHotel(int id)

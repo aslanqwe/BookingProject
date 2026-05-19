@@ -8,8 +8,8 @@ public class Booking
     public int? RoomTypeId { get; set; }      
     public RoomType? RoomType { get; set; }    
     public string UserId { get; set; } = string.Empty;
-    public DateTime CheckIn { get; set; }
-    public DateTime CheckOut { get; set; }
+    public DateOnly CheckIn { get; set; }
+    public DateOnly CheckOut { get; set; }
     public int Guests { get; set; }
     public int Rooms { get; set; } = 1;
     public decimal TotalPrice { get; set; }

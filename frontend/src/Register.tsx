@@ -5,7 +5,8 @@ export default function Register() {
     const [formData, setFormData] = useState({
         email: '',
         password: '',
-        role: 'User' // По умолчанию обычный юзер
+        role: 'User', // По умолчанию обычный юзер
+        phone: ''
     });
     const [message, setMessage] = useState('');
 
@@ -43,6 +44,16 @@ export default function Register() {
                             className="mt-1 block w-full border rounded-md p-2 border-gray-300 focus:ring-blue-500 focus:border-blue-500"
                             onChange={(e) => setFormData({...formData, password: e.target.value})}
                             required
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Номер телефона</label>
+                        <input
+                            type="tel"
+                            placeholder="+7 (777) 123-45-67"
+                            className="mt-1 block w-full border rounded-md p-2 border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                            onChange={(e) => setFormData({...formData, phone: e.target.value})}
                         />
                     </div>
 

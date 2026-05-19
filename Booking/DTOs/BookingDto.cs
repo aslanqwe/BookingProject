@@ -8,8 +8,8 @@ public class BookingDto
     public string City { get; set; } = string.Empty;
     public int? RoomTypeId { get; set; }
     public string? RoomTypeName { get; set; }
-    public DateTime CheckIn { get; set; }
-    public DateTime CheckOut { get; set; }
+    public DateOnly CheckIn { get; set; }
+    public DateOnly CheckOut { get; set; }
     public int Guests { get; set; }
     public int Rooms { get; set; } = 1;
     public decimal TotalPrice { get; set; }
@@ -21,8 +21,8 @@ public class CreateBookingDto
 {
     public int HotelId { get; set; }
     public int? RoomTypeId { get; set; }
-    public DateTime CheckIn { get; set; }
-    public DateTime CheckOut { get; set; }
+    public DateOnly CheckIn { get; set; }
+    public DateOnly CheckOut { get; set; }
     public int Guests { get; set; }
     public int Rooms { get; set; } = 1;
 }

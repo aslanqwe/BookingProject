@@ -10,6 +10,11 @@ import AvailabilityBadge from './AvailabilityBadge';
 import HotelPage from './HotelPage';
 import { Routes, Route, useNavigate, useParams } from 'react-router-dom'
 
+// Импортируем DatePicker и локализацию
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
+import { ru } from 'date-fns/locale/ru';
+
 axios.defaults.withCredentials = true;
 
 interface Hotel {
@@ -30,8 +35,6 @@ interface User {
     email: string;
     role: string;
 }
-
-// ============ ВЫНЕСЕНО ИЗ App ============
 
 const HotelPageWrapper = ({ hotels, checkIn, checkOut, guests }: {
     hotels: Hotel[];
@@ -118,16 +121,16 @@ const Navbar = ({ user, onLogout, onNavigate }: {
     </nav>
 );
 
-const HomePage = ({
-                      hotels, searchCity, setSearchCity,
-                      checkIn, setCheckIn, checkOut, setCheckOut,
-                      guests, setGuests, rooms, setRooms,
-                      maxPrice, setMaxPrice, filterStars, sortBy, setSortBy,
-                      currentPage, totalPages, totalCount,
-                      isGuestMenuOpen, setIsGuestMenuOpen, guestMenuRef,
-                      priceTimer, setPriceTimer,
-                      fetchHotels, handleReset, handleStarsFilter, navigate
-                  }: {
+const PROPERTY_TYPE_TABS = [
+    { value: '', label: '🏠 Все' },
+    { value: 'Отель', label: '🏨 Отели' },
+    { value: 'Апартаменты', label: '🏢 Апартаменты' },
+    { value: 'Хостел', label: '🛏 Хостелы' },
+    { value: 'Гостевой дом', label: '🏠 Гостевые дома' },
+    { value: 'Вилла', label: '🌴 Виллы' },
+];
+
+interface HomePageProps {
     hotels: Hotel[];
     searchCity: string; setSearchCity: (v: string) => void;
     checkIn: string; setCheckIn: (v: string) => void;
@@ -135,17 +138,48 @@ const HomePage = ({
     guests: number; setGuests: React.Dispatch<React.SetStateAction<number>>;
     rooms: number; setRooms: React.Dispatch<React.SetStateAction<number>>;
     maxPrice: number; setMaxPrice: (v: number) => void;
-    filterStars: number; sortBy: string; setSortBy: (v: string) => void;
+    filterStars: number; setFilterStars: (v: number) => void; // Добавил сеттер для ресета
+    sortBy: string; setSortBy: (v: string) => void;
+    filterPropertyType: string; setFilterPropertyType: (v: string) => void;
     currentPage: number; totalPages: number; totalCount: number;
     isGuestMenuOpen: boolean; setIsGuestMenuOpen: (v: boolean) => void;
     guestMenuRef: React.RefObject<HTMLDivElement>;
     priceTimer: ReturnType<typeof setTimeout> | null;
     setPriceTimer: (v: ReturnType<typeof setTimeout> | null) => void;
-    fetchHotels: (city?: string, price?: number, stars?: number, page?: number, sort?: string) => void;
+    fetchHotels: (city?: string, price?: number, stars?: number, page?: number, sort?: string, propType?: string) => void;
     handleReset: () => void;
     handleStarsFilter: (s: number) => void;
     navigate: (path: string) => void;
-}) => {
+}
+
+const HomePage = ({
+                      hotels, searchCity, setSearchCity,
+                      checkIn, setCheckIn, checkOut, setCheckOut,
+                      guests, setGuests, rooms, setRooms,
+                      maxPrice, setMaxPrice, filterStars, sortBy, setSortBy,
+                      filterPropertyType, setFilterPropertyType,
+                      currentPage, totalPages, totalCount,
+                      isGuestMenuOpen, setIsGuestMenuOpen, guestMenuRef,
+                      priceTimer, setPriceTimer,
+                      fetchHotels, handleReset, handleStarsFilter, navigate
+                  }: HomePageProps) => {
+
+    // Вспомогательная функция для безопасного парсинга строк в Date
+    const parseStringToDate = (dateStr: string) => {
+        if (!dateStr) return null;
+        const [year, month, day] = dateStr.split('-').map(Number);
+        return new Date(year, month - 1, day);
+    };
+
+    // Вспомогательная функция форматирования даты в YYYY-MM-DD (без сдвига таймзон)
+    const formatDateToString = (date: Date | null) => {
+        if (!date) return '';
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
     const getRoomsText = (count: number) => {
         const lastDigit = count % 10;
         const lastTwoDigits = count % 100;
@@ -157,12 +191,15 @@ const HomePage = ({
 
     return (
         <>
+            {/* ГЕРОБЛОК */}
             <div className="bg-[#003580] pb-16 pt-8">
                 <div className="container mx-auto px-4">
                     <h2 className="text-3xl font-bold text-white mb-1">Отели в Казахстане</h2>
                     <p className="text-blue-200 mb-6 text-sm">Найдите идеальное жильё для вашей поездки</p>
                     <div className="bg-[#febb02] p-1 rounded-lg inline-block w-full">
                         <div className="bg-white rounded-md flex flex-col md:flex-row">
+
+                            {/* ПОЛЕ: КУДА */}
                             <div className="flex items-center gap-2 px-4 py-3 flex-1 border-b md:border-b-0 md:border-r border-gray-200">
                                 <svg className="w-5 h-5 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
@@ -171,45 +208,42 @@ const HomePage = ({
                                 <input
                                     type="text"
                                     placeholder="Куда вы хотите поехать?"
-                                    className="outline-none text-sm w-full text-gray-700 placeholder-gray-400"
+                                    className="outline-none text-sm w-full text-gray-700 placeholder-gray-400 font-semibold"
                                     value={searchCity}
                                     onChange={e => setSearchCity(e.target.value)}
-                                    onKeyDown={e => e.key === 'Enter' && fetchHotels(searchCity, maxPrice, filterStars, 1, sortBy)}
+                                    onKeyDown={e => e.key === 'Enter' && fetchHotels(searchCity, maxPrice, filterStars, 1, sortBy, filterPropertyType)}
                                 />
                             </div>
-                            <div className="flex items-center gap-2 px-4 py-3 border-b md:border-b-0 md:border-r border-gray-200">
+
+                            {/* ОБЪЕДИНЕННОЕ ПОЛЕ: ДАТЫ ЗАЕЗДА И ВЫЕЗДА */}
+                            <div className="flex items-center gap-2 px-4 py-3 flex-1 border-b md:border-b-0 md:border-r border-gray-200 min-w-[280px]">
                                 <svg className="w-5 h-5 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                                 </svg>
-                                <div>
-                                    <p className="text-xs text-gray-400">Заезд</p>
-                                    <input
-                                        type="date"
-                                        className="outline-none text-sm text-gray-700"
-                                        value={checkIn}
-                                        min={new Date().toISOString().split('T')[0]}
-                                        onChange={e => {
-                                            setCheckIn(e.target.value);
-                                            if (checkOut && e.target.value > checkOut) setCheckOut('');
+                                <div className="w-full">
+                                    <p className="text-xs text-gray-400 mb-0.5">Даты заезда — выезда</p>
+                                    <DatePicker
+                                        selectsRange={true}
+                                        startDate={parseStringToDate(checkIn)}
+                                        endDate={parseStringToDate(checkOut)}
+                                        onChange={(update) => {
+                                            const [start, end] = update;
+                                            setCheckIn(formatDateToString(start));
+                                            setCheckOut(formatDateToString(end));
                                         }}
+                                        minDate={new Date()}
+                                        locale={ru}
+                                        dateFormat="dd.MM.yyyy"
+                                        isClearable={true}
+                                        placeholderText="Выберите период проживания"
+                                        className="outline-none text-sm w-full font-semibold text-gray-800 bg-transparent cursor-pointer placeholder-gray-400"
+                                        wrapperClassName="w-full"
+                                        monthsShown={2}
                                     />
                                 </div>
                             </div>
-                            <div className="flex items-center gap-2 px-4 py-3 border-b md:border-b-0 md:border-r border-gray-200">
-                                <svg className="w-5 h-5 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                </svg>
-                                <div>
-                                    <p className="text-xs text-gray-400">Выезд</p>
-                                    <input
-                                        type="date"
-                                        className="outline-none text-sm text-gray-700"
-                                        value={checkOut}
-                                        min={checkIn || new Date().toISOString().split('T')[0]}
-                                        onChange={e => setCheckOut(e.target.value)}
-                                    />
-                                </div>
-                            </div>
+
+                            {/* ПОЛЕ: ГОСТИ */}
                             <div
                                 className="relative flex items-center gap-2 px-4 py-3 border-b md:border-b-0 md:border-r border-gray-200 cursor-pointer hover:bg-gray-50 transition"
                                 ref={guestMenuRef}
@@ -220,7 +254,7 @@ const HomePage = ({
                                 </svg>
                                 <div>
                                     <p className="text-xs text-gray-400">Гости и номера</p>
-                                    <div className="text-sm text-gray-700 whitespace-nowrap">
+                                    <div className="text-sm text-gray-700 font-semibold whitespace-nowrap">
                                         {guests} взрослых · {getRoomsText(rooms)}
                                     </div>
                                 </div>
@@ -250,7 +284,7 @@ const HomePage = ({
                                 )}
                             </div>
                             <button
-                                onClick={() => fetchHotels(searchCity, maxPrice, filterStars, 1, sortBy)}
+                                onClick={() => fetchHotels(searchCity, maxPrice, filterStars, 1, sortBy, filterPropertyType)}
                                 className="bg-[#0071c2] hover:bg-[#005999] text-white font-bold px-8 py-3 rounded-r-md transition text-sm whitespace-nowrap"
                             >
                                 Найти
@@ -260,8 +294,34 @@ const HomePage = ({
                 </div>
             </div>
 
+            {/* ВКЛАДКИ ТИПОВ ОБЪЕКТОВ */}
+            <div className="bg-white border-b shadow-sm">
+                <div className="container mx-auto px-4">
+                    <div className="flex gap-1 overflow-x-auto py-2">
+                        {PROPERTY_TYPE_TABS.map(tab => (
+                            <button
+                                key={tab.value}
+                                onClick={() => {
+                                    setFilterPropertyType(tab.value);
+                                    fetchHotels(searchCity, maxPrice, filterStars, 1, sortBy, tab.value);
+                                }}
+                                className={`shrink-0 px-4 py-2 rounded-full text-sm font-medium transition ${
+                                    filterPropertyType === tab.value
+                                        ? 'bg-[#003580] text-white'
+                                        : 'text-gray-600 hover:bg-gray-100'
+                                }`}
+                            >
+                                {tab.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            </div>
+
+            {/* КОНТЕНТ */}
             <div className="container mx-auto px-4 py-8">
                 <div className="flex flex-col lg:flex-row gap-6">
+                    {/* ФИЛЬТРЫ */}
                     <aside className="lg:w-64 shrink-0">
                         <div className="bg-white rounded-lg shadow-sm border p-4">
                             <h3 className="font-bold text-gray-800 mb-4">Фильтры</h3>
@@ -275,7 +335,7 @@ const HomePage = ({
                                         const val = Number(e.target.value);
                                         setMaxPrice(val);
                                         if (priceTimer) clearTimeout(priceTimer);
-                                        const timer = setTimeout(() => fetchHotels(searchCity, val, filterStars, 1, sortBy), 500);
+                                        const timer = setTimeout(() => fetchHotels(searchCity, val, filterStars, 1, sortBy, filterPropertyType), 500);
                                         setPriceTimer(timer);
                                     }}
                                     className="w-full accent-blue-600"
@@ -305,6 +365,7 @@ const HomePage = ({
                         </div>
                     </aside>
 
+                    {/* СПИСОК ОТЕЛЕЙ */}
                     <div className="flex-1">
                         <div className="flex justify-between items-center mb-4">
                             <h2 className="text-xl font-bold text-gray-800">
@@ -313,7 +374,7 @@ const HomePage = ({
                             </h2>
                             <select
                                 value={sortBy}
-                                onChange={e => { setSortBy(e.target.value); fetchHotels(searchCity, maxPrice, filterStars, 1, e.target.value); }}
+                                onChange={e => { setSortBy(e.target.value); fetchHotels(searchCity, maxPrice, filterStars, 1, e.target.value, filterPropertyType); }}
                                 className="text-sm border border-gray-300 rounded-lg px-3 py-2 outline-none focus:border-blue-500 bg-white"
                             >
                                 <option value="">По умолчанию</option>
@@ -371,8 +432,11 @@ const HomePage = ({
                                                     )}
                                                 </div>
                                                 <div className="text-right">
-                                                    <p className="text-2xl font-bold text-gray-900">{h.pricePerNight.toLocaleString()} ₸</p>
-                                                    <p className="text-xs text-gray-400 mb-2">за ночь</p>
+                                                    <p className="text-2xl font-bold text-gray-900">
+                                                        {h.totalRooms > 0
+                                                            ? `от ${h.pricePerNight.toLocaleString()} ₸`
+                                                            : 'Цены уточняются'}
+                                                    </p>
                                                     <button
                                                         onClick={() => navigate(`/hotels/${h.id}`)}
                                                         className="bg-[#0071c2] hover:bg-[#005999] text-white text-sm font-bold px-5 py-2 rounded transition"
@@ -390,19 +454,19 @@ const HomePage = ({
                         {totalPages > 1 && (
                             <div className="flex justify-center items-center gap-2 mt-6">
                                 <button
-                                    onClick={() => fetchHotels(searchCity, maxPrice, filterStars, currentPage - 1, sortBy)}
+                                    onClick={() => fetchHotels(searchCity, maxPrice, filterStars, currentPage - 1, sortBy, filterPropertyType)}
                                     disabled={currentPage === 1}
                                     className="px-4 py-2 rounded border text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 transition"
                                 >← Назад</button>
                                 {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
                                     <button
                                         key={p}
-                                        onClick={() => fetchHotels(searchCity, maxPrice, filterStars, p, sortBy)}
+                                        onClick={() => fetchHotels(searchCity, maxPrice, filterStars, p, sortBy, filterPropertyType)}
                                         className={`w-10 h-10 rounded border text-sm font-medium transition ${currentPage === p ? 'bg-[#003580] text-white border-[#003580]' : 'hover:bg-gray-50'}`}
                                     >{p}</button>
                                 ))}
                                 <button
-                                    onClick={() => fetchHotels(searchCity, maxPrice, filterStars, currentPage + 1, sortBy)}
+                                    onClick={() => fetchHotels(searchCity, maxPrice, filterStars, currentPage + 1, sortBy, filterPropertyType)}
                                     disabled={currentPage === totalPages}
                                     className="px-4 py-2 rounded border text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-50 transition"
                                 >Вперёд →</button>
@@ -415,8 +479,7 @@ const HomePage = ({
     );
 };
 
-// ============ APP ============
-function App() {
+export default function App() {
     const navigate = useNavigate()
     const [hotels, setHotels] = useState<Hotel[]>([])
     const [user, setUser] = useState<User | null>(null)
@@ -436,6 +499,7 @@ function App() {
     const [totalCount, setTotalCount] = useState(0)
     const PAGE_SIZE = 5
     const [sortBy, setSortBy] = useState('')
+    const [filterPropertyType, setFilterPropertyType] = useState('')
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -447,7 +511,14 @@ function App() {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    const fetchHotels = (city = searchCity, price = maxPrice, stars = filterStars, page = 1, sort = sortBy) => {
+    const fetchHotels = (
+        city = searchCity,
+        price = maxPrice,
+        stars = filterStars,
+        page = 1,
+        sort = sortBy,
+        propType = filterPropertyType
+    ) => {
         axios.get('/api/hotels', {
             params: {
                 city: city.trim() || undefined,
@@ -459,7 +530,8 @@ function App() {
                 rooms,
                 page,
                 pageSize: PAGE_SIZE,
-                sortBy: sort || undefined
+                sortBy: sort || undefined,
+                propertyType: propType || undefined
             }
         })
             .then(res => {
@@ -493,110 +565,71 @@ function App() {
         navigate('/');
     };
 
+    // Дописанный обработчик сброса фильтров
     const handleReset = () => {
         setSearchCity('');
         setMaxPrice(500000);
+        setFilterStars(0);
         setCheckIn('');
         setCheckOut('');
         setGuests(2);
         setRooms(1);
-        setFilterStars(0);
-        setCurrentPage(1);
         setSortBy('');
-        fetchHotels('', 500000, 0, 1, '');
+        setFilterPropertyType('');
+
+        axios.get('/api/hotels', {
+            params: {
+                page: 1,
+                pageSize: PAGE_SIZE,
+                guests: 2,
+                rooms: 1
+            }
+        })
+            .then(res => {
+                setHotels(res.data.hotels)
+                setTotalPages(res.data.totalPages)
+                setTotalCount(res.data.totalCount)
+                setCurrentPage(res.data.currentPage)
+            })
+            .catch(err => console.error(err));
     };
 
     const handleStarsFilter = (stars: number) => {
-        const newStars = filterStars === stars ? 0 : stars;
-        setFilterStars(newStars);
-        setCurrentPage(1);
-        fetchHotels(searchCity, maxPrice, newStars, 1, sortBy);
+        const newVal = filterStars === stars ? 0 : stars;
+        setFilterStars(newVal);
+        fetchHotels(searchCity, maxPrice, newVal, 1, sortBy, filterPropertyType);
     };
 
-    if (loading) {
-        return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <div className="text-center">
-                    <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                    <p className="text-gray-500 text-lg">Загрузка...</p>
-                </div>
-            </div>
-        );
-    }
+    if (loading) return null;
 
     return (
-        <div className="min-h-screen bg-gray-100">
-            <Navbar user={user} onLogout={handleLogout} onNavigate={navigate} />
-            <Routes>
-                <Route path="/" element={
-                    <HomePage
-                        hotels={hotels}
-                        searchCity={searchCity} setSearchCity={setSearchCity}
-                        checkIn={checkIn} setCheckIn={setCheckIn}
-                        checkOut={checkOut} setCheckOut={setCheckOut}
-                        guests={guests} setGuests={setGuests}
-                        rooms={rooms} setRooms={setRooms}
-                        maxPrice={maxPrice} setMaxPrice={setMaxPrice}
-                        filterStars={filterStars}
-                        sortBy={sortBy} setSortBy={setSortBy}
-                        currentPage={currentPage}
-                        totalPages={totalPages}
-                        totalCount={totalCount}
-                        isGuestMenuOpen={isGuestMenuOpen}
-                        setIsGuestMenuOpen={setIsGuestMenuOpen}
-                        guestMenuRef={guestMenuRef}
-                        priceTimer={priceTimer}
-                        setPriceTimer={setPriceTimer}
-                        fetchHotels={fetchHotels}
-                        handleReset={handleReset}
-                        handleStarsFilter={handleStarsFilter}
-                        navigate={navigate}
-                    />
-                } />
-                <Route path="/login" element={
-                    <main className="container mx-auto py-8 px-4">
-                        <Login onLoginSuccess={(userData) => {
-                            setUser(userData);
-                            fetchHotels();
-                            navigate('/');
-                        }} />
-                    </main>
-                } />
-                <Route path="/register" element={
-                    <main className="container mx-auto py-8 px-4">
-                        <Register />
-                    </main>
-                } />
-                <Route path="/add-hotel" element={
-                    <main className="container mx-auto py-8 px-4">
-                        {user ? (
-                            <AddHotel ownerEmail={user.email} onSuccess={() => { fetchHotels(); navigate('/'); }} />
-                        ) : (
-                            <p className="text-center text-gray-500">Нет доступа</p>
-                        )}
-                    </main>
-                } />
-                <Route path="/my-bookings" element={
-                    <main className="container mx-auto py-8 px-4">
-                        <MyBookings />
-                    </main>
-                } />
-                <Route path="/owner-dashboard" element={
-                    <main className="container mx-auto py-8 px-4">
-                        <OwnerDashboard />
-                    </main>
-                } />
-                <Route path="/hotels/:id" element={
-                    <HotelPageWrapper
-                        hotels={hotels}
-                        checkIn={checkIn}
-                        checkOut={checkOut}
-                        guests={guests}
-                    />
-                } />
-            </Routes>
+        <div className="min-h-screen bg-gray-50 flex flex-col justify-between">
+            <div className="flex-1">
+                <Navbar user={user} onLogout={handleLogout} onNavigate={navigate} />
+                <Routes>
+                    <Route path="/" element={
+                        <HomePage
+                            hotels={hotels} searchCity={searchCity} setSearchCity={setSearchCity}
+                            checkIn={checkIn} setCheckIn={setCheckIn} checkOut={checkOut} setCheckOut={setCheckOut}
+                            guests={guests} setGuests={setGuests} rooms={rooms} setRooms={setRooms}
+                            maxPrice={maxPrice} setMaxPrice={setMaxPrice} filterStars={filterStars} setFilterStars={setFilterStars}
+                            sortBy={sortBy} setSortBy={setSortBy} filterPropertyType={filterPropertyType} setFilterPropertyType={setFilterPropertyType}
+                            currentPage={currentPage} totalPages={totalPages} totalCount={totalCount}
+                            isGuestMenuOpen={isGuestMenuOpen} setIsGuestMenuOpen={setIsGuestMenuOpen} guestMenuRef={guestMenuRef}
+                            priceTimer={priceTimer} setPriceTimer={setPriceTimer} fetchHotels={fetchHotels}
+                            handleReset={handleReset} handleStarsFilter={handleStarsFilter} navigate={navigate}
+                        />
+                    } />
+                    <Route path="/hotels/:id" element={
+                        <HotelPageWrapper hotels={hotels} checkIn={checkIn} checkOut={checkOut} guests={guests} />
+                    } />
+                    <Route path="/login" element={<Login onLoginSuccess={() => window.location.href='/'} />} />
+                    <Route path="/register" element={<Register />} />
+                    <Route path="/add-hotel" element={<AddHotel />} />
+                    <Route path="/my-bookings" element={<MyBookings />} />
+                    <Route path="/owner-dashboard" element={<OwnerDashboard />} />
+                </Routes>
+            </div>
         </div>
     );
 }
-
-export default App

@@ -30,11 +30,11 @@ namespace Booking.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<DateTime>("CheckIn")
-                        .HasColumnType("timestamp with time zone");
+                    b.Property<DateOnly>("CheckIn")
+                        .HasColumnType("date");
 
-                    b.Property<DateTime>("CheckOut")
-                        .HasColumnType("timestamp with time zone");
+                    b.Property<DateOnly>("CheckOut")
+                        .HasColumnType("date");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");

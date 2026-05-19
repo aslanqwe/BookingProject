@@ -22,8 +22,8 @@ public class RoomTypesController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetRoomTypes(
         int hotelId,
-        [FromQuery] DateTime? checkIn,
-        [FromQuery] DateTime? checkOut)
+        [FromQuery] DateOnly? checkIn, 
+        [FromQuery] DateOnly? checkOut)
     {
         var roomTypes = await _context.RoomTypes
             .Where(rt => rt.HotelId == hotelId)
@@ -36,15 +36,12 @@ public class RoomTypesController : ControllerBase
             int bookedRooms = 0;
             if (checkIn.HasValue && checkOut.HasValue)
             {
-                var checkInUtc = DateTime.SpecifyKind(checkIn.Value, DateTimeKind.Utc);
-                var checkOutUtc = DateTime.SpecifyKind(checkOut.Value, DateTimeKind.Utc);
-
                 bookedRooms = await _context.Bookings
                     .Where(b =>
                         b.RoomTypeId == rt.Id &&
                         b.Status == "Active" &&
-                        b.CheckIn < checkOutUtc &&
-                        b.CheckOut > checkInUtc)
+                        b.CheckIn < checkOut.Value &&
+                        b.CheckOut > checkIn.Value)
                     .SumAsync(b => b.Rooms);
             }
 
@@ -105,6 +102,12 @@ public class RoomTypesController : ControllerBase
 
         var roomType = await _context.RoomTypes.FindAsync(id);
         if (roomType == null || roomType.HotelId != hotelId) return NotFound();
+
+        var hasActiveBookings = await _context.Bookings
+            .AnyAsync(b => b.RoomTypeId == id && b.Status == "Active");
+
+        if (hasActiveBookings)
+            return BadRequest(new { message = "Нельзя удалить тип номера с активными бронями" });
 
         _context.RoomTypes.Remove(roomType);
         await _context.SaveChangesAsync();

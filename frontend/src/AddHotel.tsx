@@ -21,7 +21,6 @@ export default function AddHotel({onSuccess, ownerEmail}: AddHotelProps) {
         city: "",
         address: "",
         description: "",
-        pricePerNight: 0,
         stars: 3,
         imageUrl: "",
         propertyType: "",
@@ -197,20 +196,6 @@ export default function AddHotel({onSuccess, ownerEmail}: AddHotelProps) {
                         onChange={e => setFormData({...formData, description: e.target.value})}
                         required
                     />
-                </div>
-
-                <div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Базовая цена за ночь (₸)</label>
-                        <input
-                            type="number"
-                            className="w-full border rounded-lg p-2.5 text-sm outline-none focus:border-blue-500"
-                            value={formData.pricePerNight}
-                            onChange={e => setFormData({...formData, pricePerNight: Number(e.target.value)})}
-                            required
-                            min={0}
-                        />
-                    </div>
                 </div>
 
                 {/* Звёзды — только для отелей */}

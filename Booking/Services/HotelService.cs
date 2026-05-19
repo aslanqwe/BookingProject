@@ -22,16 +22,18 @@ public class HotelService : IHotelService
         return h == null ? null : MapToDto(h);
     }
 
-    public async Task<(IEnumerable<HotelDto> Hotels, int TotalCount)> GetAllAsync(
-        string? city, decimal? maxPrice, int? stars,
-        DateTime? checkIn, DateTime? checkOut, int? guests, int? roomsCount,
-        int page, int pageSize, string? sortBy)
+    public async Task<(IEnumerable<HotelDto> Hotels, int TotalCount)> GetAllAsync(string? city, decimal? maxPrice,
+        int? stars,
+        DateOnly? checkIn, DateOnly? checkOut, int? guests, int? roomsCount,
+        int page, int pageSize, string? sortBy, string? propertyType = null)
     {
         var query = _context.Hotels
             .Include(h => h.RoomTypes)
             .Where(h => !h.IsDeleted)
             .AsQueryable();
-
+        
+        if (!string.IsNullOrEmpty(propertyType))
+            query = query.Where(h => h.PropertyType == propertyType);
         if (!string.IsNullOrWhiteSpace(city))
             query = query.Where(h => h.City.ToLower().Contains(city.ToLower()));
         if (maxPrice.HasValue)
@@ -41,8 +43,6 @@ public class HotelService : IHotelService
 
         if (checkIn.HasValue && checkOut.HasValue)
         {
-            var checkInUtc = DateTime.SpecifyKind(checkIn.Value, DateTimeKind.Utc);
-            var checkOutUtc = DateTime.SpecifyKind(checkOut.Value, DateTimeKind.Utc);
             int reqRooms = roomsCount ?? 1;
             int reqGuests = guests ?? 1;
 
@@ -53,8 +53,8 @@ public class HotelService : IHotelService
                     .Where(b =>
                         b.RoomTypeId == rt.Id &&
                         b.Status == "Active" &&
-                        b.CheckIn < checkOutUtc &&
-                        b.CheckOut > checkInUtc)
+                        b.CheckIn < checkOut.Value && 
+                        b.CheckOut > checkIn.Value)
                     .Sum(b => (int?)b.Rooms ?? 0) >= reqRooms)
             ));
         }
@@ -131,7 +131,9 @@ public class HotelService : IHotelService
         City = h.City,
         Address = h.Address,
         Description = h.Description,
-        PricePerNight = h.PricePerNight,
+        PricePerNight = h.RoomTypes != null && h.RoomTypes.Any()
+            ? h.RoomTypes.Min(rt => rt.PricePerNight)
+            : h.PricePerNight,
         Stars = h.Stars,
         ImageUrl = h.ImageUrl,
         PropertyType = h.PropertyType,

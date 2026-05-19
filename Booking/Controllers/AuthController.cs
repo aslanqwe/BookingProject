@@ -22,7 +22,12 @@ public class AuthController : ControllerBase
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] RegisterModel model)
     {
-        var user = new IdentityUser { UserName = model.Email, Email = model.Email };
+        var user = new IdentityUser
+        {
+            UserName = model.Email,
+            Email = model.Email,
+            PhoneNumber = model.Phone
+        };
         var result = await _userManager.CreateAsync(user, model.Password);
 
         if (result.Succeeded)
@@ -98,5 +103,16 @@ public class AuthController : ControllerBase
     
 }
 
-public class LoginModel { public string Email { get; set; } = ""; public string Password { get; set; } = ""; }
-public class RegisterModel { public string Email { get; set; } = ""; public string Password { get; set; } = ""; public string Role { get; set; } = "User"; }
+public class LoginModel
+{
+    public string Email { get; set; } = ""; 
+    public string Password { get; set; } = "";
+}
+
+public class RegisterModel
+{
+    public string Email { get; set; } = ""; 
+    public string Password { get; set; } = ""; 
+    public string Role { get; set; } = "User"; 
+    public string? Phone { get; set; }
+}

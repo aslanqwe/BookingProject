@@ -67,7 +67,7 @@ export default function OwnerDashboard() {
     }, {} as Record<string, Booking[]>);
 
     const totalRevenue = bookings
-        .filter(b => b.status === 'Active')
+        .filter(b => b.status === 'Active' || b.status === 'Completed')
         .reduce((sum, b) => sum + b.totalPrice, 0);
 
     const activeBookings = bookings.filter(b => b.status === 'Active').length;
@@ -166,7 +166,7 @@ export default function OwnerDashboard() {
                 <div className="flex flex-col gap-6">
                     {Object.entries(groupedByHotel).map(([hotelName, hotelBookings]) => {
                         const hotelRevenue = hotelBookings
-                            .filter(b => b.status === 'Active')
+                            .filter(b => b.status === 'Active' || b.status === 'Completed')
                             .reduce((sum, b) => sum + b.totalPrice, 0);
 
                         return (
