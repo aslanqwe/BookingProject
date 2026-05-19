@@ -1,5 +1,8 @@
 import {useEffect, useState, useRef} from 'react';
 import axios from 'axios';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
+import {ru} from 'date-fns/locale/ru';
 
 interface RoomType {
     id: number;
@@ -68,8 +71,22 @@ export default function HotelPage({
         children: 0,
         rooms: 1,
     });
-
+    const [ownerContact, setOwnerContact] = useState<{ phone?: string; email?: string } | null>(null);
     const menuRef = useRef<HTMLDivElement>(null);
+
+    // Хелперы для безопасной работы с DateOnly (строками YYYY-MM-DD)
+    const parseDateString = (str: string) => {
+        if (!str) return null;
+        return new Date(str + 'T00:00:00');
+    };
+
+    const formatDateToString = (date: Date | null) => {
+        if (!date) return '';
+        const yyyy = date.getFullYear();
+        const mm = String(date.getMonth() + 1).padStart(2, '0');
+        const dd = String(date.getDate()).padStart(2, '0');
+        return `${yyyy}-${mm}-${dd}`;
+    };
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -97,8 +114,8 @@ export default function HotelPage({
     const fetchRoomTypes = (ci = checkIn, co = checkOut) => {
         setLoadingRooms(true);
         const params: Record<string, string> = {};
-        if (ci) params.checkIn = new Date(ci).toISOString();
-        if (co) params.checkOut = new Date(co).toISOString();
+        if (ci) params.checkIn = ci;
+        if (co) params.checkOut = co;
 
         axios.get(`/api/hotels/${hotel.id}/roomtypes`, {params})
             .then(res => setRoomTypes(res.data))
@@ -142,8 +159,8 @@ export default function HotelPage({
             await axios.post('/api/bookings', {
                 hotelId: hotel.id,
                 roomTypeId: bookingState.roomTypeId,
-                checkIn: new Date(checkIn).toISOString(),
-                checkOut: new Date(checkOut).toISOString(),
+                checkIn: checkIn,
+                checkOut: checkOut,
                 guests: bookingState.guests,
                 rooms: bookingState.rooms
             });
@@ -158,6 +175,10 @@ export default function HotelPage({
         } finally {
             setBookingLoading(false);
         }
+        axios.get(`/api/hotels/${hotel.id}/owner-contact`)
+            .then(res => setOwnerContact(res.data))
+            .catch(() => {
+            });
     };
 
     const scrollToRooms = () => {
@@ -239,19 +260,27 @@ export default function HotelPage({
                     <div className="hidden md:flex flex-col gap-2 h-full">
                         <div className="h-1/2 bg-gray-100 overflow-hidden rounded-tr-xl">
                             {hotel.imageUrl ? (
-                                <img src={hotel.imageUrl} alt={`${hotel.name} - вид 1`} className="w-full h-full object-cover hover:opacity-90 transition-opacity" />
+                                <img src={hotel.imageUrl} alt={`${hotel.name} - вид 1`}
+                                     className="w-full h-full object-cover hover:opacity-90 transition-opacity"/>
                             ) : (
-                                <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs bg-gray-200">Нет Фото</div>
+                                <div
+                                    className="w-full h-full flex items-center justify-center text-gray-400 text-xs bg-gray-200">Нет
+                                    Фото</div>
                             )}
                         </div>
                         <div className="h-1/2 bg-gray-100 relative overflow-hidden group cursor-pointer rounded-br-xl">
                             {hotel.imageUrl ? (
-                                <img src={hotel.imageUrl} alt={`${hotel.name} - вид 2`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                                <img src={hotel.imageUrl} alt={`${hotel.name} - вид 2`}
+                                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"/>
                             ) : (
-                                <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs bg-gray-200">Нет Фото</div>
+                                <div
+                                    className="w-full h-full flex items-center justify-center text-gray-400 text-xs bg-gray-200">Нет
+                                    Фото</div>
                             )}
-                            <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 flex items-center justify-center transition-colors">
-                                <span className="text-white font-bold text-xs bg-black/50 px-3 py-1.5 rounded-lg backdrop-blur-sm">
+                            <div
+                                className="absolute inset-0 bg-black/20 group-hover:bg-black/40 flex items-center justify-center transition-colors">
+                                <span
+                                    className="text-white font-bold text-xs bg-black/50 px-3 py-1.5 rounded-lg backdrop-blur-sm">
                                     Смотреть все фото
                                 </span>
                             </div>
@@ -293,54 +322,77 @@ export default function HotelPage({
                     <h2 className="text-2xl font-bold text-gray-900 mb-4">Наличие мест</h2>
 
                     {/* Строка поиска */}
-                    <div className="bg-[#febb02] p-1 rounded-lg mb-6 relative z-20">
-                        <div className="bg-white rounded-md flex flex-col md:flex-row">
-                            <div className="flex items-center gap-2 px-4 py-3 border-r border-gray-200 flex-1">
-                                <div>
-                                    <p className="text-xs text-gray-400">Заезд</p>
-                                    <input
-                                        className="outline-none text-sm w-full"
-                                        type="date"
-                                        value={checkIn}
-                                        min={new Date().toISOString().split('T')[0]}
-                                        onChange={(e) => {
-                                            setCheckIn(e.target.value);
-                                            if (checkOut && e.target.value > checkOut) setCheckOut('');
+                    <div className="bg-[#febb02] p-1 rounded-lg mb-6 relative z-30 shadow-sm">
+                        <div className="bg-white rounded-md flex flex-col md:flex-row items-stretch">
+
+                            {/* ОБЪЕДИНЕННЫЙ КРАСИВЫЙ КАЛЕНДАРЬ */}
+                            <div
+                                className="flex items-center gap-3 px-4 py-2 border-r border-gray-200 flex-[2] min-w-[300px] hover:bg-gray-50 transition-colors cursor-pointer">
+                                <span className="text-xl text-gray-400 select-none">📅</span>
+                                <div className="w-full flex flex-col">
+                                    <p className="text-xs text-gray-400 font-bold tracking-wider">Даты заезда — выезда</p>
+                                    <DatePicker
+                                        selectsRange={true}
+                                        startDate={checkIn ? parseDateString(checkIn) : null}
+                                        endDate={checkOut ? parseDateString(checkOut) : null}
+                                        onChange={(update) => {
+                                            const [start, end] = update;
+                                            setCheckIn(start ? formatDateToString(start) : '');
+                                            setCheckOut(end ? formatDateToString(end) : '');
+                                        }}
+                                        minDate={new Date()}
+                                        locale={ru}
+                                        dateFormat="dd.MM.yyyy"
+                                        isClearable={true}
+                                        placeholderText="Выберите период проживания"
+                                        className="outline-none text-sm w-full font-semibold text-gray-800 bg-transparent cursor-pointer placeholder-gray-400 mt-0.5"
+                                        wrapperClassName="w-full"
+
+                                        // Новые пропсы для Booking-стиля:
+                                        monthsShown={2} // Показывает 2 месяца одновременно
+                                        renderDayContents={(day, date) => {
+                                            // Проверяем, не прошлая ли это дата (чтобы не рисовать цены на прошедшие дни)
+                                            const today = new Date();
+                                            today.setHours(0, 0, 0, 0);
+                                            const isPast = date < today;
+
+                                            return (
+                                                <div className="calendar-day-cell">
+                                                    <span className="day-number">{day}</span>
+                                                    {!isPast && (
+                                                        <span className="day-price">
+                        {hotel.pricePerNight.toLocaleString()} ₸
+                    </span>
+                                                    )}
+                                                </div>
+                                            );
                                         }}
                                     />
                                 </div>
                             </div>
-                            <div className="flex items-center gap-2 px-4 py-3 border-r border-gray-200 flex-1">
-                                <div>
-                                    <p className="text-xs text-gray-400">Выезд</p>
-                                    <input
-                                        className="outline-none text-sm w-full"
-                                        type="date"
-                                        value={checkOut}
-                                        min={checkIn || new Date().toISOString().split('T')[0]}
-                                        onChange={(e) => setCheckOut(e.target.value)}
-                                    />
-                                </div>
-                            </div>
+
+                            {/* Гости и номера */}
                             <div
                                 ref={menuRef}
-                                className="relative flex items-center gap-2 px-4 py-3 border-r border-gray-200 cursor-pointer flex-1"
+                                className="relative flex items-center gap-3 px-4 py-2 border-r border-gray-200 cursor-pointer flex-1 hover:bg-gray-50 transition-colors"
                                 onClick={() => setIsGuestMenuOpen(!isGuestMenuOpen)}
                             >
-                                <div>
-                                    <p className="text-xs text-gray-400">Гости и номера</p>
-                                    <span className="text-sm text-gray-700 truncate">
+                                <span className="text-xl text-gray-400 select-none">👤</span>
+                                <div className="w-full flex flex-col">
+                                    <p className="text-xs text-gray-400 font-bold uppercase tracking-wider">Гости и
+                                        номера</p>
+                                    <span className="text-sm font-semibold text-gray-800 mt-0.5 truncate">
                                         {options.adults} взр · {options.children} дет · {options.rooms} ном
                                     </span>
                                 </div>
                                 {isGuestMenuOpen && (
                                     <div
-                                        className="absolute top-full left-0 mt-2 w-72 bg-white shadow-xl border rounded-lg p-4 z-50"
+                                        className="absolute top-full left-0 mt-2 w-72 bg-white shadow-xl border rounded-lg p-4 z-50 animate-fadeIn"
                                         onClick={e => e.stopPropagation()}
                                     >
                                         {(['adults', 'children', 'rooms'] as const).map((key) => (
                                             <div key={key} className="flex justify-between items-center mb-4 last:mb-0">
-                                                <span className="text-sm font-medium">
+                                                <span className="text-sm font-medium text-gray-800">
                                                     {key === 'adults' ? 'Взрослые' : key === 'children' ? 'Дети' : 'Номера'}
                                                 </span>
                                                 <div className="flex items-center gap-3">
@@ -348,18 +400,24 @@ export default function HotelPage({
                                                         disabled={(key === 'adults' && options.adults <= 1) || (key === 'children' && options.children <= 0) || (key === 'rooms' && options.rooms <= 1)}
                                                         onClick={() => handleOption(key, 'd')}
                                                         className="w-8 h-8 border border-[#0071c2] text-[#0071c2] rounded font-bold disabled:opacity-30 hover:bg-blue-50 transition"
-                                                    >−</button>
-                                                    <span className="w-4 text-center font-semibold">{options[key]}</span>
+                                                    >−
+                                                    </button>
+                                                    <span
+                                                        className="w-4 text-center font-semibold text-gray-800">{options[key]}</span>
                                                     <button
                                                         onClick={() => handleOption(key, 'i')}
                                                         className="w-8 h-8 border border-[#0071c2] text-[#0071c2] rounded font-bold hover:bg-blue-50 transition"
-                                                    >+</button>
+                                                    >+
+                                                    </button>
                                                 </div>
                                             </div>
                                         ))}
                                         <button
-                                            onClick={(e) => { e.stopPropagation(); setIsGuestMenuOpen(false); }}
-                                            className="w-full mt-4 border border-[#0071c2] text-[#0071c2] font-bold py-2 rounded hover:bg-blue-50 transition"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setIsGuestMenuOpen(false);
+                                            }}
+                                            className="w-full mt-4 border border-[#0071c2] bg-[#0071c2] text-white font-bold py-2 rounded hover:bg-[#005999] transition"
                                         >
                                             Готово
                                         </button>
@@ -368,7 +426,7 @@ export default function HotelPage({
                             </div>
                             <button
                                 onClick={handleSearch}
-                                className="bg-[#0071c2] hover:bg-[#005999] text-white font-bold px-8 py-3 rounded-r-md transition"
+                                className="bg-[#0071c2] hover:bg-[#005999] text-white font-bold px-8 py-3 rounded-r-md transition text-base shrink-0"
                             >
                                 Найти
                             </button>
@@ -389,7 +447,8 @@ export default function HotelPage({
 
                             {loadingRooms ? (
                                 <div className="p-12 text-center">
-                                    <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+                                    <div
+                                        className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
                                 </div>
                             ) : roomTypes.length === 0 ? (
                                 <div className="p-12 text-center">
@@ -409,7 +468,9 @@ export default function HotelPage({
                                     <table className="w-full">
                                         <thead className="bg-gray-50 border-b">
                                         <tr>
-                                            <th className="text-left px-6 py-4 text-xs font-bold uppercase text-gray-600">Тип номера</th>
+                                            <th className="text-left px-6 py-4 text-xs font-bold uppercase text-gray-600">Тип
+                                                номера
+                                            </th>
                                             <th className="text-center px-4 py-4 text-xs font-bold uppercase text-gray-600">Вместимость</th>
                                             <th className="text-center px-4 py-4 text-xs font-bold uppercase text-gray-600">
                                                 {nights > 0 ? `Цена за ${nights} ноч.` : 'Цена/ночь'}
@@ -446,6 +507,22 @@ export default function HotelPage({
                                         <p className="text-green-700 font-bold text-lg">Успешно забронировано!</p>
                                         <p className="text-green-600 text-sm mt-1">{hotel.name}</p>
                                         <p className="text-green-800 font-bold text-xl mt-2">{totalPrice.toLocaleString()} ₸</p>
+
+                                        {ownerContact && (ownerContact.phone || ownerContact.email) && (
+                                            <div className="mt-4 bg-blue-50 rounded-lg p-4 text-left">
+                                                <p className="text-sm font-bold text-gray-700 mb-2">📞 Контакты
+                                                    владельца:</p>
+                                                {ownerContact.phone && (
+                                                    <a
+                                                        href={"tel:" + ownerContact.phone}
+                                                        className="block text-blue-600 font-bold text-lg hover:underline"
+                                                    >
+                                                        {ownerContact.phone}
+                                                    </a>
+                                                )}
+                                            </div>
+                                        )}
+
                                         <button
                                             onClick={onBack}
                                             className="mt-4 w-full bg-green-600 text-white py-2 rounded-lg font-bold hover:bg-green-700 transition"
@@ -457,7 +534,8 @@ export default function HotelPage({
                                     <>
                                         <div className="bg-blue-50 rounded-lg p-4 mb-4">
                                             <p className="font-bold text-blue-700">{bookingState.roomTypeName}</p>
-                                            <p className="text-sm text-gray-600 mt-1">🛏 {bookingState.rooms} номер · 👤 {bookingState.guests} гост.</p>
+                                            <p className="text-sm text-gray-600 mt-1">🛏 {bookingState.rooms} номер ·
+                                                👤 {bookingState.guests} гост.</p>
                                             {checkIn && checkOut && (
                                                 <>
                                                     <p className="text-sm text-gray-600">📅 {checkIn} — {checkOut}</p>
@@ -477,14 +555,16 @@ export default function HotelPage({
                                                         <span>{totalPrice.toLocaleString()} ₸</span>
                                                     </div>
                                                 )}
-                                                <div className="flex justify-between font-bold text-gray-900 text-lg mt-2">
+                                                <div
+                                                    className="flex justify-between font-bold text-gray-900 text-lg mt-2">
                                                     <span>Итого</span>
                                                     <span>{totalPrice.toLocaleString()} ₸</span>
                                                 </div>
                                             </div>
                                         )}
                                         {bookingError && (
-                                            <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-lg p-3 mb-4">
+                                            <div
+                                                className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-lg p-3 mb-4">
                                                 {bookingError}
                                             </div>
                                         )}
@@ -496,7 +576,8 @@ export default function HotelPage({
                                             {bookingLoading ? 'Оформляем...' : 'Забронировать'}
                                         </button>
                                         {(!checkIn || !checkOut) && (
-                                            <p className="text-xs text-gray-400 text-center mt-2">Выберите даты чтобы продолжить</p>
+                                            <p className="text-xs text-gray-400 text-center mt-2">Выберите даты чтобы
+                                                продолжить</p>
                                         )}
                                     </>
                                 ) : (
@@ -555,50 +636,30 @@ function RoomTypeRow({room, nights, amenityIcons, isSelected, onSelect, defaultR
                         <span key={i} className="text-sm">👤</span>
                     ))}
                 </div>
-                <p className="text-xs text-gray-500 mt-1">до {room.maxGuests} чел.</p>
+                <p className="text-xs text-gray-500 mt-1">до {room.maxGuests}</p>
             </td>
-            <td className="text-center px-4 py-5 align-top">
-                <p className="font-bold text-gray-900 text-lg">
-                    {nights > 0
-                        ? (room.pricePerNight * nights * defaultRooms).toLocaleString()
-                        : room.pricePerNight.toLocaleString()} ₸
-                </p>
-                {nights > 0 && (
-                    <p className="text-xs text-gray-400">{room.pricePerNight.toLocaleString()} ₸/ночь</p>
-                )}
+            <td className="text-center px-4 py-5 align-top font-semibold text-gray-900">
+                {nights > 0 ? (room.pricePerNight * nights).toLocaleString() : room.pricePerNight.toLocaleString()} ₸
             </td>
             <td className="text-center px-4 py-5 align-top">
                 {isAvailable ? (
-                    <span className={`text-xs font-bold px-2 py-1 rounded-full ${
-                        room.availableRooms <= 3
-                            ? 'bg-orange-100 text-orange-700'
-                            : 'bg-green-100 text-green-700'
-                    }`}>
-                        {room.availableRooms <= 3
-                            ? `⚡ Осталось ${room.availableRooms}`
-                            : `✓ ${room.availableRooms} своб.`}
-                    </span>
+                    <span className="text-green-600 font-bold text-sm">Осталось: {room.availableRooms}</span>
                 ) : (
-                    <span className="text-xs font-bold bg-red-100 text-red-600 px-2 py-1 rounded-full">
-                        Занято
-                    </span>
+                    <span className="text-red-500 font-bold text-sm">Мест нет</span>
                 )}
             </td>
-            <td className="px-4 py-5 text-center align-top">
-                {isAvailable ? (
-                    <button
-                        onClick={() => onSelect(room, defaultRooms)}
-                        className={`px-6 py-2 rounded-lg text-sm font-bold transition ${
-                            isSelected
-                                ? 'bg-green-600 text-white hover:bg-green-700'
-                                : 'bg-[#0071c2] text-white hover:bg-[#005999]'
-                        }`}
-                    >
-                        {isSelected ? '✓ Выбрано' : 'Выбрать'}
-                    </button>
-                ) : (
-                    <span className="text-xs text-gray-400">Недоступно</span>
-                )}
+            <td className="text-center px-4 py-5 align-top">
+                <button
+                    disabled={!isAvailable}
+                    onClick={() => onSelect(room, defaultRooms)}
+                    className={`px-4 py-2 text-xs font-bold rounded transition shadow-sm ${
+                        isSelected
+                            ? 'bg-green-600 text-white hover:bg-green-700'
+                            : 'bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white disabled:bg-gray-100 disabled:text-gray-400 disabled:shadow-none'
+                    }`}
+                >
+                    {isSelected ? '✓ Выбран' : 'Выбрать'}
+                </button>
             </td>
         </tr>
     );
