@@ -41,7 +41,7 @@ public class BookingService : IBookingService
                 .Where(b =>
                     b.RoomTypeId == dto.RoomTypeId &&
                     b.Status == "Active" &&
-                    b.CheckIn < dto.CheckOut && // Теперь работает отлично, так как оба DateOnly
+                    b.CheckIn < dto.CheckOut && 
                     b.CheckOut > dto.CheckIn)
                 .SumAsync(b => b.Rooms);
 
@@ -74,7 +74,11 @@ public class BookingService : IBookingService
             Guests = dto.Guests,
             Rooms = dto.Rooms,
             TotalPrice = pricePerNight * nights * dto.Rooms,
-            Status = "Active"
+            Status = "Active",
+            GuestName = dto.GuestName,       
+            GuestEmail = dto.GuestEmail,      
+            GuestPhone = dto.GuestPhone,     
+            SpecialRequests = dto.SpecialRequests  
         };
 
         _context.Bookings.Add(booking);
@@ -178,7 +182,11 @@ public class BookingService : IBookingService
             Rooms = b.Rooms,
             TotalPrice = b.TotalPrice,
             Status = b.Status,
-            CreatedAt = b.CreatedAt
+            CreatedAt = b.CreatedAt,
+            GuestName = b.GuestName,
+            GuestEmail = b.GuestEmail,
+            GuestPhone = b.GuestPhone,
+            SpecialRequests = b.SpecialRequests,
         });
     }
 }

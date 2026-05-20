@@ -15,4 +15,9 @@ public class Booking
     public decimal TotalPrice { get; set; }
     public string Status { get; set; } = "Active";
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    
+    public string? GuestName { get; set; }
+    public string? GuestEmail { get; set; }
+    public string? GuestPhone { get; set; }
+    public string? SpecialRequests { get; set; }
 }

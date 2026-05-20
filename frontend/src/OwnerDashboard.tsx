@@ -13,6 +13,12 @@ interface Booking {
     totalPrice: number;
     status: string;
     createdAt: string;
+    guestName?: string;
+    guestEmail?: string;
+    guestPhone?: string;
+    specialRequests?: string;
+    roomTypeName?: string; // Добавлено, чтобы TypeScript не выдавал ошибку
+    rooms?: number;        // Добавлено, чтобы TypeScript не выдавал ошибку
 }
 
 interface Hotel {
@@ -81,7 +87,7 @@ export default function OwnerDashboard() {
             alert(err.response?.data?.message || 'Ошибка при удалении');
         }
     };
-    
+
     if (loading) return (
         <div className="flex justify-center py-20">
             <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
@@ -128,7 +134,7 @@ export default function OwnerDashboard() {
                                 <p className="text-sm text-gray-600">{hotel.pricePerNight.toLocaleString()} ₸/ночь · {hotel.totalRooms} номеров</p>
                             </div>
 
-                            {/* Обновленный блок кнопок */}
+                            {/* Блок кнопок */}
                             <div className="flex gap-2">
                                 <button
                                     onClick={() => setManagingRoomsHotel(hotel)}
@@ -184,26 +190,46 @@ export default function OwnerDashboard() {
                                 </div>
                                 <div className="divide-y">
                                     {hotelBookings.map(b => (
-                                        <div key={b.id} className={`px-6 py-4 flex justify-between items-center ${b.status === 'Cancelled' ? 'opacity-50' : ''}`}>
-                                            <div>
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                                                        b.status === 'Active'
-                                                            ? 'bg-green-100 text-green-700'
-                                                            : b.status === 'Completed'
-                                                                ? 'bg-gray-100 text-gray-600'
-                                                                : 'bg-red-100 text-red-500'
-                                                    }`}>
-                                                        {b.status === 'Active' ? 'Активна' : b.status === 'Completed' ? 'Завершена' : 'Отменена'}
-                                                    </span>
-                                                    <span className="text-xs text-gray-400">Оформлено {formatDate(b.createdAt)}</span>
+                                        // ВОТ ЭТОТ БЛОК БЫЛ ЗАМЕНЕН НА НОВЫЙ ВАРИАНТ С ДАННЫМИ ГОСТЯ:
+                                        <div key={b.id} className={`px-6 py-4 ${b.status === 'Cancelled' ? 'opacity-50' : ''}`}>
+                                            <div className="flex justify-between items-start">
+                                                <div className="flex-1">
+                                                    <div className="flex items-center gap-2 mb-2">
+                                                        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                                                            b.status === 'Active' ? 'bg-green-100 text-green-700' :
+                                                                b.status === 'Completed' ? 'bg-gray-100 text-gray-500' :
+                                                                    'bg-red-100 text-red-500'
+                                                        }`}>
+                                                            {b.status === 'Active' ? 'Активна' : b.status === 'Completed' ? 'Завершена' : 'Отменена'}
+                                                        </span>
+                                                        <span className="text-xs text-gray-400">Оформлено {formatDate(b.createdAt)}</span>
+                                                    </div>
+
+                                                    {/* Даты */}
+                                                    <p className="text-sm font-medium text-gray-700">
+                                                        📅 {formatDate(b.checkIn)} — {formatDate(b.checkOut)}
+                                                        <span className="text-gray-400 ml-2">· {nights(b.checkIn, b.checkOut)} ноч.</span>
+                                                    </p>
+
+                                                    {/* Тип номера */}
+                                                    {b.roomTypeName && (
+                                                        <p className="text-sm text-gray-600 mt-1">🛏 {b.roomTypeName} · {b.rooms} ном.</p>
+                                                    )}
+
+                                                    {/* Данные гостя */}
+                                                    <div className="mt-2 bg-gray-50 rounded-lg p-3 text-sm">
+                                                        <p className="font-bold text-gray-700 mb-1">👤 Гость:</p>
+                                                        {b.guestName && <p className="text-gray-600">Имя: <span className="font-medium">{b.guestName}</span></p>}
+                                                        {b.guestPhone && <p className="text-gray-600">Тел: <a href={"tel:" + b.guestPhone} className="text-blue-600 font-medium">{b.guestPhone}</a></p>}
+                                                        {b.guestEmail && <p className="text-gray-600">Email: <span className="text-blue-600">{b.guestEmail}</span></p>}
+                                                        <p className="text-gray-600">Гостей: <span className="font-medium">{b.guests} чел.</span></p>
+                                                        {b.specialRequests && (
+                                                            <p className="text-gray-600 mt-1">💬 Пожелания: <span className="italic">{b.specialRequests}</span></p>
+                                                        )}
+                                                    </div>
                                                 </div>
-                                                <p className="text-sm text-gray-700">
-                                                    {formatDate(b.checkIn)} — {formatDate(b.checkOut)}
-                                                    <span className="text-gray-400 ml-2">· {nights(b.checkIn, b.checkOut)} ноч. · {b.guests} гост.</span>
-                                                </p>
+                                                <p className="font-bold text-gray-800 text-lg ml-4">{b.totalPrice.toLocaleString()} ₸</p>
                                             </div>
-                                            <p className="font-bold text-gray-800">{b.totalPrice.toLocaleString()} ₸</p>
                                         </div>
                                     ))}
                                 </div>

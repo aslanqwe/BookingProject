@@ -3,6 +3,8 @@ import axios from 'axios';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import {ru} from 'date-fns/locale/ru';
+import BookingCheckout from './BookingCheckout';
+
 
 interface RoomType {
     id: number;
@@ -73,7 +75,12 @@ export default function HotelPage({
     });
     const [ownerContact, setOwnerContact] = useState<{ phone?: string; email?: string } | null>(null);
     const menuRef = useRef<HTMLDivElement>(null);
-
+    
+    const [checkoutData, setCheckoutData] = useState<{
+        roomType: { id: number; name: string; pricePerNight: number; maxGuests: number };
+        rooms: number;
+    } | null>(null);
+    
     // Хелперы для безопасной работы с DateOnly (строками YYYY-MM-DD)
     const parseDateString = (str: string) => {
         if (!str) return null;
@@ -147,38 +154,21 @@ export default function HotelPage({
         setBookingError('');
     };
 
-    const handleBook = async () => {
+    const handleBook = () => {
         if (!bookingState) return;
         if (!checkIn || !checkOut) {
             setBookingError('Выберите даты заезда и выезда');
             return;
         }
-        setBookingLoading(true);
-        setBookingError('');
-        try {
-            await axios.post('/api/bookings', {
-                hotelId: hotel.id,
-                roomTypeId: bookingState.roomTypeId,
-                checkIn: checkIn,
-                checkOut: checkOut,
-                guests: bookingState.guests,
-                rooms: bookingState.rooms
-            });
-            setBookingSuccess(true);
-            onBookingSuccess();
-        } catch (err: any) {
-            if (err.response?.status === 401) {
-                setBookingError('Войдите в аккаунт чтобы забронировать');
-            } else {
-                setBookingError(err.response?.data?.message || 'Ошибка при бронировании');
-            }
-        } finally {
-            setBookingLoading(false);
-        }
-        axios.get(`/api/hotels/${hotel.id}/owner-contact`)
-            .then(res => setOwnerContact(res.data))
-            .catch(() => {
-            });
+        setCheckoutData({
+            roomType: {
+                id: bookingState.roomTypeId!,
+                name: bookingState.roomTypeName,
+                pricePerNight: bookingState.pricePerNight,
+                maxGuests: roomTypes.find(r => r.id === bookingState.roomTypeId)?.maxGuests || 2
+            },
+            rooms: bookingState.rooms
+        });
     };
 
     const scrollToRooms = () => {
@@ -209,6 +199,29 @@ export default function HotelPage({
         roomTypes.every(r => r.availableRooms <= 0) &&
         checkIn && checkOut;
 
+    if (checkoutData) {
+        return (
+            <BookingCheckout
+                hotel={{
+                    id: hotel.id,
+                    name: hotel.name,
+                    city: hotel.city,
+                    address: hotel.address,
+                    imageUrl: hotel.imageUrl
+                }}
+                roomType={checkoutData.roomType}
+                checkIn={checkIn}
+                checkOut={checkOut}
+                guests={guests}
+                rooms={checkoutData.rooms}
+                nights={nights}
+                userEmail=""  
+                onBack={() => setCheckoutData(null)}
+                onSuccess={() => {}}
+            />
+        );
+    }
+    
     return (
         <div className="min-h-screen bg-gray-50 pb-12">
             {/* Навигация */}
