@@ -1,41 +1,17 @@
-import {useEffect, useState} from 'react';
-import axios from 'axios';
-
-interface Booking {
-    id: number;
-    hotelName: string;
-    city: string;
-    checkIn: string;
-    checkOut: string;
-    guests: number;
-    totalPrice: number;
-    status: string;
-    createdAt: string;
-}
+import { useEffect } from 'react';
+import { useBookings } from '../hooks/useBookings';
 
 export default function MyBookings() {
-    const [bookings, setBookings] = useState<Booking[]>([]);
-    const [loading, setLoading] = useState(true);
-
-    const fetchBookings = () => {
-        axios.get('/api/bookings/my')
-            .then(res => setBookings(res.data))
-            .catch(err => console.error(err))
-            .finally(() => setLoading(false));
-    };
+    // Подключаем наш хук вместо локальных стейтов
+    const { bookings, loading, fetchMyBookings, cancelBooking } = useBookings();
 
     useEffect(() => {
-        fetchBookings();
-    }, []);
+        fetchMyBookings();
+    }, [fetchMyBookings]);
 
     const handleCancel = async (id: number) => {
-        if (!confirm('Вы уверены что хотите отменить бронь?')) return;
-        try {
-            await axios.post(`/api/bookings/${id}/cancel`);
-            fetchBookings();
-        } catch (err: any) {
-            alert(err.response?.data?.message || 'Ошибка при отмене');
-        }
+        // Логика confirm и запроса уже спрятана в хуке
+        await cancelBooking(id);
     };
 
     const formatDate = (dateStr: string) => {

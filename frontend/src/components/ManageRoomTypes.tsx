@@ -1,18 +1,7 @@
 import { useEffect, useState } from 'react';
-import axios from 'axios';
-
-interface RoomType {
-    id: number;
-    hotelId: number;
-    name: string;
-    description?: string;
-    pricePerNight: number;
-    totalRooms: number;
-    maxGuests: number;
-    amenities?: string;
-    imageUrl?: string;
-    availableRooms: number;
-}
+import AmenitiesSelector from './AmenitiesSelector';
+import { hotelsApi } from '../api/hotels';
+import type { RoomType } from '../types';
 
 interface ManageRoomTypesProps {
     hotelId: number;
@@ -46,14 +35,14 @@ export default function ManageRoomTypes({ hotelId, hotelName, onClose }: ManageR
         pricePerNight: 0,
         totalRooms: 1,
         maxGuests: 2,
-        amenities: [] as string[],
+        amenities: '',
         imageUrl: ''
     });
 
     const fetchRoomTypes = () => {
         setLoading(true);
-        axios.get(`/api/hotels/${hotelId}/roomtypes`)
-            .then(res => setRoomTypes(res.data))
+        hotelsApi.getRoomTypes(hotelId)
+            .then(data => setRoomTypes(data))
             .catch(err => console.error(err))
             .finally(() => setLoading(false));
     };
@@ -66,28 +55,15 @@ export default function ManageRoomTypes({ hotelId, hotelName, onClose }: ManageR
         const file = e.target.files?.[0];
         if (!file) return;
         setUploading(true);
-        const form = new FormData();
-        form.append("file", file);
         try {
-            const res = await axios.post("/api/upload/image", form, {
-                headers: { "Content-Type": "multipart/form-data" }
-            });
-            setFormData(prev => ({ ...prev, imageUrl: res.data.imageUrl }));
+            const res = await hotelsApi.uploadImage(file);
+            setFormData(prev => ({ ...prev, imageUrl: res.imageUrl }));
             setImagePreview(URL.createObjectURL(file));
         } catch (err: any) {
-            alert(err.response?.data?.message || "Ошибка загрузки фото");
+            alert(err.response?.data?.message || err.message || "Ошибка загрузки фото");
         } finally {
             setUploading(false);
         }
-    };
-
-    const toggleAmenity = (amenity: string) => {
-        setFormData(prev => ({
-            ...prev,
-            amenities: prev.amenities.includes(amenity)
-                ? prev.amenities.filter(a => a !== amenity)
-                : [...prev.amenities, amenity]
-        }));
     };
 
     const handleSave = async (e: React.FormEvent) => {
@@ -95,13 +71,10 @@ export default function ManageRoomTypes({ hotelId, hotelName, onClose }: ManageR
         setSaving(true);
         setError('');
         try {
-            await axios.post(`/api/hotels/${hotelId}/roomtypes`, {
-                ...formData,
-                amenities: formData.amenities.join(', ')
-            });
+            await hotelsApi.createRoomType(hotelId, formData);
             setFormData({
                 name: '', description: '', pricePerNight: 0,
-                totalRooms: 1, maxGuests: 2, amenities: [], imageUrl: ''
+                totalRooms: 1, maxGuests: 2, amenities: '', imageUrl: ''
             });
             setImagePreview(null);
             setShowForm(false);
@@ -116,7 +89,7 @@ export default function ManageRoomTypes({ hotelId, hotelName, onClose }: ManageR
     const handleDelete = async (id: number) => {
         if (!confirm('Удалить этот тип номера?')) return;
         try {
-            await axios.delete(`/api/hotels/${hotelId}/roomtypes/${id}`);
+            await hotelsApi.deleteRoomType(hotelId, id);
             fetchRoomTypes();
         } catch (err: any) {
             alert(err.response?.data?.message || 'Ошибка при удалении');
@@ -296,22 +269,11 @@ export default function ManageRoomTypes({ hotelId, hotelName, onClose }: ManageR
                             {/* Удобства */}
                             <div className="mb-4">
                                 <label className="block text-sm font-medium text-gray-700 mb-2">Удобства</label>
-                                <div className="flex flex-wrap gap-2">
-                                    {AMENITY_OPTIONS.map(amenity => (
-                                        <button
-                                            key={amenity}
-                                            type="button"
-                                            onClick={() => toggleAmenity(amenity)}
-                                            className={`text-xs px-3 py-1.5 rounded-full border transition ${
-                                                formData.amenities.includes(amenity)
-                                                    ? 'bg-blue-600 text-white border-blue-600'
-                                                    : 'border-gray-300 hover:border-blue-400 text-gray-600'
-                                            }`}
-                                        >
-                                            {amenity}
-                                        </button>
-                                    ))}
-                                </div>
+                                <AmenitiesSelector
+                                    options={AMENITY_OPTIONS}
+                                    selectedAmenities={formData.amenities}
+                                    onChange={(newValue) => setFormData({ ...formData, amenities: newValue })}
+                                />
                             </div>
 
                             {error && (

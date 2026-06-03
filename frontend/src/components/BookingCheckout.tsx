@@ -75,6 +75,7 @@ export default function BookingCheckout({
             setStep('success');
             onSuccess();
         } catch (err: any) {
+            
             setError(err.response?.data?.message || err.response?.data || 'Ошибка при бронировании');
         } finally {
             setLoading(false);

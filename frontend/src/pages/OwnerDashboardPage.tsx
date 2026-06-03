@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import axios from 'axios';
-import EditHotelModal from './EditHotelModal';
-import ManageRoomTypes from './ManageRoomTypes';
+import EditHotelModal from '../components/EditHotelModal';
+import ManageRoomTypes from '../components/ManageRoomTypes';
+import { useOwnerData } from '../hooks/useOwnerData';
 
 interface Booking {
     id: number;
@@ -17,8 +17,8 @@ interface Booking {
     guestEmail?: string;
     guestPhone?: string;
     specialRequests?: string;
-    roomTypeName?: string; // Добавлено, чтобы TypeScript не выдавал ошибку
-    rooms?: number;        // Добавлено, чтобы TypeScript не выдавал ошибку
+    roomTypeName?: string;
+    rooms?: number;
 }
 
 interface Hotel {
@@ -33,28 +33,14 @@ interface Hotel {
 }
 
 export default function OwnerDashboard() {
-    const [bookings, setBookings] = useState<Booking[]>([]);
-    const [myHotels, setMyHotels] = useState<Hotel[]>([]);
-    const [loading, setLoading] = useState(true);
+    const { bookings, myHotels, loading, fetchData, deleteHotel } = useOwnerData();
+
     const [editingHotel, setEditingHotel] = useState<Hotel | null>(null);
     const [managingRoomsHotel, setManagingRoomsHotel] = useState<Hotel | null>(null);
 
-    const fetchData = () => {
-        Promise.all([
-            axios.get('/api/bookings/owner'),
-            axios.get('/api/hotels/my')
-        ])
-            .then(([bookingsRes, hotelsRes]) => {
-                setBookings(bookingsRes.data);
-                setMyHotels(hotelsRes.data);
-            })
-            .catch(err => console.error(err))
-            .finally(() => setLoading(false));
-    };
-
     useEffect(() => {
         fetchData();
-    }, []);
+    }, [fetchData]);
 
     const formatDate = (dateStr: string) => {
         return new Date(dateStr).toLocaleDateString('ru-RU', {
@@ -77,16 +63,6 @@ export default function OwnerDashboard() {
         .reduce((sum, b) => sum + b.totalPrice, 0);
 
     const activeBookings = bookings.filter(b => b.status === 'Active').length;
-
-    const handleDelete = async (hotelId: number, hotelName: string) => {
-        if (!confirm(`Удалить "${hotelName}"? Все брони сохранятся в истории.`)) return;
-        try {
-            await axios.delete(`/api/hotels/${hotelId}`);
-            fetchData();
-        } catch (err: any) {
-            alert(err.response?.data?.message || 'Ошибка при удалении');
-        }
-    };
 
     if (loading) return (
         <div className="flex justify-center py-20">
@@ -149,7 +125,7 @@ export default function OwnerDashboard() {
                                     ✏️ Изменить
                                 </button>
                                 <button
-                                    onClick={() => handleDelete(hotel.id, hotel.name)}
+                                    onClick={() => deleteHotel(hotel.id, hotel.name)}
                                     className="px-4 py-2 bg-red-500 text-white text-sm font-bold rounded-lg hover:bg-red-600 transition"
                                 >
                                     🗑 Удалить
@@ -190,7 +166,6 @@ export default function OwnerDashboard() {
                                 </div>
                                 <div className="divide-y">
                                     {hotelBookings.map(b => (
-                                        // ВОТ ЭТОТ БЛОК БЫЛ ЗАМЕНЕН НА НОВЫЙ ВАРИАНТ С ДАННЫМИ ГОСТЯ:
                                         <div key={b.id} className={`px-6 py-4 ${b.status === 'Cancelled' ? 'opacity-50' : ''}`}>
                                             <div className="flex justify-between items-start">
                                                 <div className="flex-1">
@@ -257,7 +232,6 @@ export default function OwnerDashboard() {
                     onClose={() => setManagingRoomsHotel(null)}
                 />
             )}
-
         </div>
     );
 }

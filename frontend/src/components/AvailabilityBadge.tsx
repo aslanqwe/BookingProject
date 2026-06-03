@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import axios from 'axios';
+import { hotelsApi } from '../api/hotels';
 
 interface Props {
     hotelId: number;
@@ -25,13 +25,8 @@ export default function AvailabilityBadge({ hotelId, checkIn, checkOut }: Props)
         }
 
         setLoading(true);
-        axios.get(`/api/hotels/${hotelId}/availability`, {
-            params: {
-                checkIn: new Date(checkIn).toISOString(),
-                checkOut: new Date(checkOut).toISOString()
-            }
-        })
-            .then(res => setAvailability(res.data))
+        hotelsApi.checkAvailability(hotelId, checkIn, checkOut)
+            .then(data => setAvailability(data))
             .catch(() => setAvailability(null))
             .finally(() => setLoading(false));
     }, [hotelId, checkIn, checkOut]);

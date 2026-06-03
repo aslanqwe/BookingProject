@@ -1,31 +1,27 @@
 ﻿import { useState } from 'react';
-import axios from 'axios';
+import { authApi } from '../api/auth';
+import type { User } from '../types';
 
 interface LoginProps {
-    onLoginSuccess: (user: { email: string; role: string }) => void;
+    onLoginSuccess: (user: User) => void;
 }
 
-export default function Login({ onLoginSuccess }: LoginProps) {
+export default function LoginPage({ onLoginSuccess }: LoginProps) {
     const [formData, setFormData] = useState({ email: '', password: '' });
     const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
-
+        setLoading(true);
         try {
-            const response = await axios.post('/api/auth/login', formData);
-
-            localStorage.setItem('user', JSON.stringify({
-                email: response.data.email,
-                role: response.data.role
-            }));
-
-            onLoginSuccess(response.data);
-
-        } catch (err: any) {
-            console.error('Ошибка входа:', err);
+            const data = await authApi.login(formData);
+            onLoginSuccess({ email: data.email, role: data.role });
+        } catch {
             setError('Неверный логин или пароль');
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -40,7 +36,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
                             type="email"
                             placeholder="example@mail.com"
                             className="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none"
-                            onChange={(e) => setFormData({...formData, email: e.target.value})}
+                            onChange={e => setFormData(prev => ({ ...prev, email: e.target.value }))}
                             required
                         />
                     </div>
@@ -50,12 +46,16 @@ export default function Login({ onLoginSuccess }: LoginProps) {
                             type="password"
                             placeholder="••••••••"
                             className="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none"
-                            onChange={(e) => setFormData({...formData, password: e.target.value})}
+                            onChange={e => setFormData(prev => ({ ...prev, password: e.target.value }))}
                             required
                         />
                     </div>
-                    <button type="submit" className="w-full bg-[#003580] text-white py-2 rounded font-bold hover:bg-[#002b66] transition-colors">
-                        Войти
+                    <button
+                        type="submit"
+                        disabled={loading}
+                        className="w-full bg-[#003580] text-white py-2 rounded font-bold hover:bg-[#002b66] transition disabled:opacity-50"
+                    >
+                        {loading ? 'Входим...' : 'Войти'}
                     </button>
                 </form>
                 {error && (
