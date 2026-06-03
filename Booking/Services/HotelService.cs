@@ -31,13 +31,16 @@ public class HotelService : IHotelService
             .Include(h => h.RoomTypes)
             .Where(h => !h.IsDeleted)
             .AsQueryable();
-        
+
         if (!string.IsNullOrEmpty(propertyType))
             query = query.Where(h => h.PropertyType == propertyType);
         if (!string.IsNullOrWhiteSpace(city))
             query = query.Where(h => h.City.ToLower().Contains(city.ToLower()));
         if (maxPrice.HasValue)
-            query = query.Where(h => h.PricePerNight <= maxPrice.Value);
+            query = query.Where(h =>
+                h.RoomTypes.Any()
+                    ? h.RoomTypes.Min(rt => rt.PricePerNight) <= maxPrice.Value
+                    : h.PricePerNight <= maxPrice.Value);
         if (stars.HasValue)
             query = query.Where(h => h.Stars == stars.Value);
 
@@ -53,7 +56,7 @@ public class HotelService : IHotelService
                     .Where(b =>
                         b.RoomTypeId == rt.Id &&
                         b.Status == "Active" &&
-                        b.CheckIn < checkOut.Value && 
+                        b.CheckIn < checkOut.Value &&
                         b.CheckOut > checkIn.Value)
                     .Sum(b => (int?)b.Rooms ?? 0) >= reqRooms)
             ));
@@ -61,10 +64,22 @@ public class HotelService : IHotelService
 
         query = sortBy switch
         {
-            "price_asc" => query.OrderBy(h => h.PricePerNight),
-            "price_desc" => query.OrderByDescending(h => h.PricePerNight),
-            "stars_desc" => query.OrderByDescending(h => h.Stars),
-            "stars_asc" => query.OrderBy(h => h.Stars),
+            "price_asc" => query
+                .OrderBy(h => h.RoomTypes.Any() ? h.RoomTypes.Min(rt => rt.PricePerNight) : h.PricePerNight)
+                .ThenBy(h => h.Id), 
+        
+            "price_desc" => query
+                .OrderByDescending(h => h.RoomTypes.Any() ? h.RoomTypes.Min(rt => rt.PricePerNight) : h.PricePerNight)
+                .ThenBy(h => h.Id),
+        
+            "stars_desc" => query
+                .OrderByDescending(h => h.Stars)
+                .ThenBy(h => h.Id),
+        
+            "stars_asc" => query
+                .OrderBy(h => h.Stars)
+                .ThenBy(h => h.Id),
+        
             _ => query.OrderBy(h => h.Id)
         };
 
@@ -131,8 +146,8 @@ public class HotelService : IHotelService
         City = h.City,
         Address = h.Address,
         Description = h.Description,
-        PricePerNight = h.RoomTypes != null && h.RoomTypes.Any()
-            ? h.RoomTypes.Min(rt => rt.PricePerNight)
+        PricePerNight = h.RoomTypes != null && h.RoomTypes.Any() 
+            ? h.RoomTypes.Min(rt => rt.PricePerNight) 
             : h.PricePerNight,
         Stars = h.Stars,
         ImageUrl = h.ImageUrl,
@@ -140,7 +155,7 @@ public class HotelService : IHotelService
         HotelAmenities = h.HotelAmenities,
         TotalRooms = h.RoomTypes?.Sum(rt => rt.TotalRooms) ?? 0
     };
-    
+
     public async Task<bool> DeleteAsync(int id, string ownerId)
     {
         var hotel = await _context.Hotels.FindAsync(id);

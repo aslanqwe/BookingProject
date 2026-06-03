@@ -1,17 +1,17 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import {useState, useEffect, useRef, useCallback} from 'react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
-import { ru } from 'date-fns/locale/ru';
-import HotelCard, { type Hotel } from '../components/HotelCard';
-import { useHotels } from '../hooks/useHotels';
+import {ru} from 'date-fns/locale/ru';
+import HotelCard, {type Hotel} from '../components/HotelCard';
+import {useHotels} from '../hooks/useHotels';
 
 const PROPERTY_TYPE_TABS = [
-    { value: '', label: '🏠 Все' },
-    { value: 'Отель', label: '🏨 Отели' },
-    { value: 'Апартаменты', label: '🏢 Апарт.' },
-    { value: 'Хостел', label: '🛏 Хостел' },
-    { value: 'Гостевой дом', label: '🏠 Гост. дом' },
-    { value: 'Вилла', label: '🌴 Вилла' },
+    {value: '', label: '🏠 Все'},
+    {value: 'Отель', label: '🏨 Отели'},
+    {value: 'Апартаменты', label: '🏢 Апарт.'},
+    {value: 'Хостел', label: '🛏 Хостел'},
+    {value: 'Гостевой дом', label: '🏠 Гост. дом'},
+    {value: 'Вилла', label: '🌴 Вилла'},
 ];
 
 const PAGE_SIZE = 5;
@@ -43,7 +43,7 @@ const getRoomsText = (count: number): string => {
 
 export default function HomePage() {
     // Хук для отелей — вся логика запросов внутри 
-    const { hotels, totalPages, totalCount, currentPage, fetchHotels } = useHotels();
+    const {hotels, totalPages, totalCount, currentPage, fetchHotels} = useHotels();
 
     // Фильтры 
     const [searchCity, setSearchCity] = useState('');
@@ -112,20 +112,31 @@ export default function HomePage() {
         setSortBy('');
         setFilterPropertyType('');
         setShowFilters(false);
-        fetchHotels({ page: 1, pageSize: PAGE_SIZE, guests: 2, rooms: 1 });
+        fetchHotels({page: 1, pageSize: PAGE_SIZE, guests: 2, rooms: 1});
     };
 
     const handleStarsFilter = (star: number) => {
         const newVal = filterStars === star ? 0 : star;
         setFilterStars(newVal);
         setShowFilters(false);
-        search({ stars: newVal });
+        search({stars: newVal});
     };
 
     const handlePriceChange = (val: number) => {
         setMaxPrice(val);
         if (priceTimer) clearTimeout(priceTimer);
-        const timer = setTimeout(() => search({ maxPrice: val }), 500);
+        const timer = setTimeout(() => {
+            fetchHotels({
+                city: searchCity || undefined,
+                maxPrice: val < 500000 ? val : undefined,
+                stars: filterStars > 0 ? filterStars : undefined,
+                checkIn: checkIn || undefined,
+                checkOut: checkOut || undefined,
+                guests, rooms, page: 1, pageSize: PAGE_SIZE,
+                sortBy: sortBy || undefined,
+                propertyType: filterPropertyType || undefined,
+            });
+        }, 500);
         setPriceTimer(timer);
     };
 
@@ -143,10 +154,14 @@ export default function HomePage() {
                         <div className="bg-white rounded-md flex flex-col md:flex-row">
 
                             {/* Город */}
-                            <div className="flex items-center gap-2 px-3 py-3 flex-1 border-b md:border-b-0 md:border-r border-gray-200">
-                                <svg className="w-5 h-5 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <div
+                                className="flex items-center gap-2 px-3 py-3 flex-1 border-b md:border-b-0 md:border-r border-gray-200">
+                                <svg className="w-5 h-5 text-gray-400 shrink-0" fill="none" stroke="currentColor"
+                                     viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                          d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                          d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
                                 </svg>
                                 <input
                                     type="text"
@@ -159,9 +174,12 @@ export default function HomePage() {
                             </div>
 
                             {/* Даты */}
-                            <div className="flex items-center gap-2 px-3 py-3 flex-1 border-b md:border-b-0 md:border-r border-gray-200 min-w-[220px]">
-                                <svg className="w-5 h-5 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            <div
+                                className="flex items-center gap-2 px-3 py-3 flex-1 border-b md:border-b-0 md:border-r border-gray-200 min-w-[220px]">
+                                <svg className="w-5 h-5 text-gray-400 shrink-0" fill="none" stroke="currentColor"
+                                     viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                                 </svg>
                                 <div className="w-full">
                                     <p className="text-xs text-gray-400 mb-0.5">Даты заезда — выезда</p>
@@ -193,8 +211,10 @@ export default function HomePage() {
                                     className="relative flex items-center gap-2 px-3 py-3 flex-1 cursor-pointer border-r border-gray-200 hover:bg-gray-50 transition"
                                     onClick={() => setIsGuestMenuOpen(prev => !prev)}
                                 >
-                                    <svg className="w-5 h-5 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    <svg className="w-5 h-5 text-gray-400 shrink-0" fill="none" stroke="currentColor"
+                                         viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                              d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
                                     </svg>
                                     <div>
                                         <p className="text-xs text-gray-400">Гости</p>
@@ -209,19 +229,27 @@ export default function HomePage() {
                                             onClick={e => e.stopPropagation()}
                                         >
                                             {[
-                                                { label: 'Взрослые', value: guests, min: 1, set: setGuests },
-                                                { label: 'Номера', value: rooms, min: 1, set: setRooms },
-                                            ].map(({ label, value, min, set }) => (
-                                                <div key={label} className="flex justify-between items-center mb-5 last:mb-0">
+                                                {label: 'Взрослые', value: guests, min: 1, set: setGuests},
+                                                {label: 'Номера', value: rooms, min: 1, set: setRooms},
+                                            ].map(({label, value, min, set}) => (
+                                                <div key={label}
+                                                     className="flex justify-between items-center mb-5 last:mb-0">
                                                     <p className="font-bold text-gray-800">{label}</p>
                                                     <div className="flex items-center gap-3">
-                                                        <button onClick={() => set(v => Math.max(min, v - 1))} disabled={value <= min} className="w-9 h-9 rounded border border-[#0071c2] text-[#0071c2] font-bold text-xl flex items-center justify-center hover:bg-blue-50 disabled:opacity-30 transition">−</button>
+                                                        <button onClick={() => set(v => Math.max(min, v - 1))}
+                                                                disabled={value <= min}
+                                                                className="w-9 h-9 rounded border border-[#0071c2] text-[#0071c2] font-bold text-xl flex items-center justify-center hover:bg-blue-50 disabled:opacity-30 transition">−
+                                                        </button>
                                                         <span className="font-semibold w-5 text-center">{value}</span>
-                                                        <button onClick={() => set(v => v + 1)} className="w-9 h-9 rounded border border-[#0071c2] text-[#0071c2] font-bold text-xl flex items-center justify-center hover:bg-blue-50 transition">+</button>
+                                                        <button onClick={() => set(v => v + 1)}
+                                                                className="w-9 h-9 rounded border border-[#0071c2] text-[#0071c2] font-bold text-xl flex items-center justify-center hover:bg-blue-50 transition">+
+                                                        </button>
                                                     </div>
                                                 </div>
                                             ))}
-                                            <button onClick={() => setIsGuestMenuOpen(false)} className="w-full mt-4 border border-[#0071c2] text-[#0071c2] font-bold py-2 rounded hover:bg-blue-50 transition">Готово</button>
+                                            <button onClick={() => setIsGuestMenuOpen(false)}
+                                                    className="w-full mt-4 border border-[#0071c2] text-[#0071c2] font-bold py-2 rounded hover:bg-blue-50 transition">Готово
+                                            </button>
                                         </div>
                                     )}
                                 </div>
@@ -247,7 +275,7 @@ export default function HomePage() {
                                 key={tab.value}
                                 onClick={() => {
                                     setFilterPropertyType(tab.value);
-                                    search({ propertyType: tab.value });
+                                    search({propertyType: tab.value});
                                 }}
                                 className={`shrink-0 px-3 py-1.5 rounded-full text-xs md:text-sm font-medium transition ${
                                     filterPropertyType === tab.value
@@ -278,11 +306,13 @@ export default function HomePage() {
                         className="relative flex items-center gap-2 text-sm border border-gray-300 rounded-lg px-3 py-2 bg-white shadow-sm"
                     >
                         <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                  d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z"/>
                         </svg>
                         <span className="text-gray-700 font-medium">Фильтры</span>
                         {activeFiltersCount > 0 && (
-                            <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-[#0071c2] text-white text-xs rounded-full flex items-center justify-center font-bold">
+                            <span
+                                className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-[#0071c2] text-white text-xs rounded-full flex items-center justify-center font-bold">
                                 {activeFiltersCount}
                             </span>
                         )}
@@ -291,7 +321,7 @@ export default function HomePage() {
 
                 {/* Затемнение фона */}
                 {showFilters && (
-                    <div className="lg:hidden fixed inset-0 bg-black/50 z-40" onClick={() => setShowFilters(false)} />
+                    <div className="lg:hidden fixed inset-0 bg-black/50 z-40" onClick={() => setShowFilters(false)}/>
                 )}
 
                 <div className="flex flex-col lg:flex-row gap-6">
@@ -307,13 +337,14 @@ export default function HomePage() {
                     `}>
                         {/* Ручка на мобиле */}
                         <div className="lg:hidden flex justify-center pt-3 pb-1">
-                            <div className="w-10 h-1 bg-gray-300 rounded-full" />
+                            <div className="w-10 h-1 bg-gray-300 rounded-full"/>
                         </div>
                         <div className="flex justify-between items-center px-4 pt-3 pb-2 lg:hidden">
                             <h3 className="font-bold text-lg text-gray-800">Фильтры</h3>
                             <button onClick={() => setShowFilters(false)} className="text-gray-400 p-1">
                                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                          d="M6 18L18 6M6 6l12 12"/>
                                 </svg>
                             </button>
                         </div>
@@ -324,7 +355,8 @@ export default function HomePage() {
                             {/* Цена */}
                             <div className="mb-6">
                                 <p className="text-sm font-semibold text-gray-700 mb-3">
-                                    Цена за ночь до: <span className="text-blue-600">{maxPrice.toLocaleString()} ₸</span>
+                                    Цена за ночь до: <span
+                                    className="text-blue-600">{maxPrice.toLocaleString()} ₸</span>
                                 </p>
                                 <input
                                     type="range" min={1000} max={500000} step={1000} value={maxPrice}
@@ -350,17 +382,20 @@ export default function HomePage() {
                                                     : 'border-gray-200 hover:bg-gray-50'
                                             }`}
                                         >
-                                            <span className="text-yellow-400">{'★'.repeat(star)}{'☆'.repeat(5 - star)}</span>
+                                            <span
+                                                className="text-yellow-400">{'★'.repeat(star)}{'☆'.repeat(5 - star)}</span>
                                             <span>{star} звезды</span>
                                         </button>
                                     ))}
                                 </div>
                             </div>
 
-                            <button onClick={handleReset} className="w-full text-sm text-blue-600 border border-blue-200 rounded-lg py-2.5 hover:bg-blue-50 transition">
+                            <button onClick={handleReset}
+                                    className="w-full text-sm text-blue-600 border border-blue-200 rounded-lg py-2.5 hover:bg-blue-50 transition">
                                 Сбросить фильтры
                             </button>
-                            <button onClick={() => setShowFilters(false)} className="lg:hidden w-full bg-[#003580] text-white font-bold py-3 rounded-lg mt-3">
+                            <button onClick={() => setShowFilters(false)}
+                                    className="lg:hidden w-full bg-[#003580] text-white font-bold py-3 rounded-lg mt-3">
                                 Показать {totalCount} вариантов
                             </button>
                         </div>
@@ -376,7 +411,10 @@ export default function HomePage() {
                             </h2>
                             <select
                                 value={sortBy}
-                                onChange={e => { setSortBy(e.target.value); search({ sortBy: e.target.value }); }}
+                                onChange={e => {
+                                    setSortBy(e.target.value);
+                                    search({sortBy: e.target.value});
+                                }}
                                 className="w-full lg:w-auto text-sm border border-gray-300 rounded-lg px-3 py-2 outline-none focus:border-blue-500 bg-white"
                             >
                                 <option value="">Сортировка: по умолчанию</option>
@@ -395,7 +433,8 @@ export default function HomePage() {
                         ) : (
                             <div className="flex flex-col gap-4">
                                 {hotels.map((h: Hotel) => (
-                                    <HotelCard key={h.id} hotel={h} checkIn={checkIn} checkOut={checkOut} guests={guests} />
+                                    <HotelCard key={h.id} hotel={h} checkIn={checkIn} checkOut={checkOut}
+                                               guests={guests}/>
                                 ))}
                             </div>
                         )}
@@ -404,22 +443,24 @@ export default function HomePage() {
                         {totalPages > 1 && (
                             <div className="flex flex-wrap justify-center items-center gap-2 mt-6">
                                 <button
-                                    onClick={() => search({ page: currentPage - 1 })}
+                                    onClick={() => search({page: currentPage - 1})}
                                     disabled={currentPage === 1}
                                     className="px-3 py-2 rounded border text-sm font-medium disabled:opacity-40 hover:bg-gray-50 transition"
-                                >← Назад</button>
-                                {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+                                >← Назад
+                                </button>
+                                {Array.from({length: totalPages}, (_, i) => i + 1).map(p => (
                                     <button
                                         key={p}
-                                        onClick={() => search({ page: p })}
+                                        onClick={() => search({page: p})}
                                         className={`w-9 h-9 rounded border text-sm font-medium transition ${currentPage === p ? 'bg-[#003580] text-white border-[#003580]' : 'hover:bg-gray-50'}`}
                                     >{p}</button>
                                 ))}
                                 <button
-                                    onClick={() => search({ page: currentPage + 1 })}
+                                    onClick={() => search({page: currentPage + 1})}
                                     disabled={currentPage === totalPages}
                                     className="px-3 py-2 rounded border text-sm font-medium disabled:opacity-40 hover:bg-gray-50 transition"
-                                >Вперёд →</button>
+                                >Вперёд →
+                                </button>
                             </div>
                         )}
                     </div>

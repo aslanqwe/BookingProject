@@ -1,6 +1,6 @@
-import { useState, useCallback } from 'react';
-import { hotelsApi } from '../api/hotels';
-import { type Hotel } from '../components/HotelCard';
+import {useState, useCallback} from 'react';
+import {hotelsApi} from '../api/hotels';
+import {type Hotel} from '../components/HotelCard';
 
 export interface HotelSearchParams {
     city?: string;
@@ -36,7 +36,7 @@ export function useHotels() {
     });
 
     const fetchHotels = useCallback(async (params: HotelSearchParams = {}) => {
-        setState(prev => ({ ...prev, loading: true, error: null }));
+        setState(prev => ({...prev, loading: true, error: null}));
         try {
             const data = await hotelsApi.getHotels(params);
             setState({
@@ -49,9 +49,9 @@ export function useHotels() {
             });
         } catch (err: unknown) {
             const message = err instanceof Error ? err.message : 'Ошибка при загрузке отелей';
-            setState(prev => ({ ...prev, loading: false, error: message }));
+            setState(prev => ({...prev, loading: false, error: message}));
         }
     }, []);
 
-    return { ...state, fetchHotels };
+    return {...state, fetchHotels};
 }
