@@ -56,11 +56,16 @@ export default function HotelPage({
                                       guests: initialGuests,
                                       onBack,
                                   }: HotelPageProps) {
-    // Даты и гости 
+    // Даты и стейты гостей 
     const [checkIn, setCheckIn] = useState(initialCheckIn);
     const [checkOut, setCheckOut] = useState(initialCheckOut);
-    const [guests, setGuests] = useState(initialGuests);
-    const [options, setOptions] = useState({ adults: initialGuests || 2, children: 0, rooms: 1 });
+
+    // Новые стейты для логики с возрастами
+    const [options, setOptions] = useState({ adults: initialGuests || 2, rooms: 1 });
+    const [childAges, setChildAges] = useState<number[]>([]);
+
+    // Считаем "эффективных" гостей для бэкенда (взрослые + дети старше 2 лет)
+    const effectiveGuests = options.adults + childAges.filter(age => age > 2).length;
 
     //Бронирование 
     const [bookingState, setBookingState] = useState<BookingState | null>(null);
@@ -105,18 +110,28 @@ export default function HotelPage({
     const totalPrice = bookingState ? bookingState.pricePerNight * nights * bookingState.rooms : 0;
     const allUnavailable = roomTypes.length > 0 && roomTypes.every(r => r.availableRooms <= 0) && !!checkIn && !!checkOut;
 
-    // Обработчики 
-    const handleOption = (name: 'adults' | 'children' | 'rooms', op: 'i' | 'd') => {
+    // Обработчики для меню гостей
+    const handleOption = (name: 'adults' | 'rooms', op: 'i' | 'd') => {
         setOptions(prev => {
-            const min = { adults: 1, children: 0, rooms: 1 }[name];
+            const min = { adults: 1, rooms: 1 }[name];
             const newVal = Math.max(min, op === 'i' ? prev[name] + 1 : prev[name] - 1);
-            const updated = { ...prev, [name]: newVal };
-            setGuests(updated.adults + updated.children);
+            return { ...prev, [name]: newVal };
+        });
+    };
+
+    const addChild = () => setChildAges(prev => [...prev, 0]);
+    const removeChild = () => setChildAges(prev => prev.slice(0, -1));
+    const updateChildAge = (index: number, age: number) => {
+        setChildAges(prev => {
+            const updated = [...prev];
+            updated[index] = age;
             return updated;
         });
     };
 
     const handleSearch = () => {
+        // Здесь отправляем запрос с новыми параметрами, если API поддерживает их передачу.
+        // Сейчас просто обновляем список номеров
         fetchRoomTypes(checkIn, checkOut);
         setBookingState(null);
     };
@@ -127,7 +142,7 @@ export default function HotelPage({
             roomTypeName: room.name,
             pricePerNight: room.pricePerNight,
             rooms: roomsCount,
-            guests,
+            guests: effectiveGuests, // Сохраняем рассчитанных гостей
         });
         setBookingError('');
     };
@@ -161,7 +176,7 @@ export default function HotelPage({
                 roomType={checkoutData.roomType}
                 checkIn={checkIn}
                 checkOut={checkOut}
-                guests={guests}
+                guests={effectiveGuests} // Передаем правильное количество в Checkout
                 rooms={checkoutData.rooms}
                 nights={nights}
                 userEmail=""
@@ -183,7 +198,7 @@ export default function HotelPage({
             </div>
 
             <div className="container mx-auto px-4 py-6 max-w-6xl">
-                {/* ── Верхний блок ──────────────────────────────────────────── */}
+                {/*  Верхний блок */}
                 <div className="flex flex-col md:flex-row justify-between items-start mb-6 gap-4">
                     <div>
                         <div className="flex items-center gap-2 mb-2">
@@ -202,7 +217,7 @@ export default function HotelPage({
                     </button>
                 </div>
 
-                {/* ── Галерея ───────────────────────────────────────────────── */}
+                {/*  Галерея  */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-2 h-72 md:h-96 mb-8 rounded-xl overflow-hidden">
                     <div className="md:col-span-2 h-full bg-gray-200 overflow-hidden">
                         <img
@@ -257,7 +272,11 @@ export default function HotelPage({
                         <div className="bg-white rounded-md flex flex-col md:flex-row items-stretch">
                             {/* Даты */}
                             <div className="flex items-center gap-3 px-4 py-2 border-b md:border-b-0 md:border-r border-gray-200 flex-1 min-w-[240px]">
-                                <span className="text-xl text-gray-400 select-none">📅</span>
+                                <svg className="w-5 h-5 text-gray-400 shrink-0" fill="none" stroke="currentColor"
+                                     viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                          d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                </svg>
                                 <div className="w-full">
                                     <p className="text-xs text-gray-400 font-bold">Даты заезда — выезда</p>
                                     <DatePicker
@@ -286,11 +305,15 @@ export default function HotelPage({
                                 className="relative flex items-center gap-3 px-4 py-2 border-b md:border-b-0 md:border-r border-gray-200 cursor-pointer flex-1"
                                 onClick={() => setIsGuestMenuOpen(prev => !prev)}
                             >
-                                <span className="text-xl text-gray-400 select-none">👤</span>
+                                <svg className="w-5 h-5 text-gray-400 shrink-0" fill="none" stroke="currentColor"
+                                     viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                          d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                </svg>
                                 <div>
                                     <p className="text-xs text-gray-400 font-bold uppercase tracking-wider">Гости и номера</p>
                                     <span className="text-sm font-semibold text-gray-800">
-                                        {options.adults} взр · {options.children} дет · {options.rooms} ном
+                                        {options.adults} взр · {childAges.length} дет · {options.rooms} ном
                                     </span>
                                 </div>
 
@@ -299,22 +322,57 @@ export default function HotelPage({
                                         className="absolute top-full left-0 mt-2 w-72 bg-white shadow-xl border rounded-lg p-4 z-50"
                                         onClick={e => e.stopPropagation()}
                                     >
-                                        {(['adults', 'children', 'rooms'] as const).map(key => (
-                                            <div key={key} className="flex justify-between items-center mb-4 last:mb-0">
-                                                <span className="text-sm font-medium">
-                                                    {{ adults: 'Взрослые', children: 'Дети', rooms: 'Номера' }[key]}
-                                                </span>
-                                                <div className="flex items-center gap-3">
-                                                    <button
-                                                        disabled={(key === 'adults' && options.adults <= 1) || (key === 'children' && options.children <= 0) || (key === 'rooms' && options.rooms <= 1)}
-                                                        onClick={() => handleOption(key, 'd')}
-                                                        className="w-8 h-8 border border-[#0071c2] text-[#0071c2] rounded font-bold disabled:opacity-30 hover:bg-blue-50 transition"
-                                                    >−</button>
-                                                    <span className="w-4 text-center font-semibold">{options[key]}</span>
-                                                    <button onClick={() => handleOption(key, 'i')} className="w-8 h-8 border border-[#0071c2] text-[#0071c2] rounded font-bold hover:bg-blue-50 transition">+</button>
+                                        <div className="flex justify-between items-center mb-4">
+                                            <span className="text-sm font-medium">Взрослые</span>
+                                            <div className="flex items-center gap-3">
+                                                <button disabled={options.adults <= 1} onClick={() => handleOption('adults', 'd')} className="w-8 h-8 border border-[#0071c2] text-[#0071c2] rounded font-bold disabled:opacity-30 hover:bg-blue-50 transition">−</button>
+                                                <span className="w-4 text-center font-semibold">{options.adults}</span>
+                                                <button onClick={() => handleOption('adults', 'i')} className="w-8 h-8 border border-[#0071c2] text-[#0071c2] rounded font-bold hover:bg-blue-50 transition">+</button>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex justify-between items-center mb-4">
+                                            <span className="text-sm font-medium">Дети</span>
+                                            <div className="flex items-center gap-3">
+                                                <button disabled={childAges.length <= 0} onClick={removeChild} className="w-8 h-8 border border-[#0071c2] text-[#0071c2] rounded font-bold disabled:opacity-30 hover:bg-blue-50 transition">−</button>
+                                                <span className="w-4 text-center font-semibold">{childAges.length}</span>
+                                                <button onClick={addChild} className="w-8 h-8 border border-[#0071c2] text-[#0071c2] rounded font-bold hover:bg-blue-50 transition">+</button>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex justify-between items-center mb-4">
+                                            <span className="text-sm font-medium">Номера</span>
+                                            <div className="flex items-center gap-3">
+                                                <button disabled={options.rooms <= 1} onClick={() => handleOption('rooms', 'd')} className="w-8 h-8 border border-[#0071c2] text-[#0071c2] rounded font-bold disabled:opacity-30 hover:bg-blue-50 transition">−</button>
+                                                <span className="w-4 text-center font-semibold">{options.rooms}</span>
+                                                <button onClick={() => handleOption('rooms', 'i')} className="w-8 h-8 border border-[#0071c2] text-[#0071c2] rounded font-bold hover:bg-blue-50 transition">+</button>
+                                            </div>
+                                        </div>
+
+                                        {childAges.length > 0 && (
+                                            <div className="mt-4 pt-4 border-t border-gray-100 max-h-40 overflow-y-auto">
+                                                <p className="text-xs font-semibold text-gray-500 mb-2">Укажите возраст детей:</p>
+                                                <div className="grid grid-cols-2 gap-2">
+                                                    {childAges.map((age, index) => (
+                                                        <div key={index} className="flex flex-col gap-1">
+                                                            <label className="text-[10px] text-gray-400">Ребенок {index + 1}</label>
+                                                            <select
+                                                                value={age}
+                                                                onChange={e => updateChildAge(index, Number(e.target.value))}
+                                                                className="text-xs border rounded p-1.5 outline-none bg-gray-50 font-medium focus:border-blue-500"
+                                                            >
+                                                                {Array.from({ length: 18 }, (_, i) => (
+                                                                    <option key={i} value={i}>
+                                                                        {i === 0 ? 'Меньше года' : `${i} ${i === 1 ? 'год' : i < 5 ? 'года' : 'лет'}`}
+                                                                    </option>
+                                                                ))}
+                                                            </select>
+                                                        </div>
+                                                    ))}
                                                 </div>
                                             </div>
-                                        ))}
+                                        )}
+
                                         <button
                                             onClick={e => { e.stopPropagation(); setIsGuestMenuOpen(false); }}
                                             className="w-full mt-4 bg-[#0071c2] text-white font-bold py-2 rounded hover:bg-[#005999] transition"
@@ -332,13 +390,13 @@ export default function HotelPage({
                     </div>
 
                     <div className="flex flex-col lg:flex-row gap-6">
-                        {/* ── Таблица номеров ───────────────────────────────── */}
+                        {/*  Таблица номеров  */}
                         <div className="flex-1 bg-white rounded-xl border shadow-sm overflow-hidden">
                             <div className="bg-[#003580] px-6 py-4">
                                 <h2 className="text-white font-bold">Доступные номера</h2>
                                 {nights > 0 && (
                                     <p className="text-blue-200 text-sm mt-0.5">
-                                        {checkIn} — {checkOut} · {nights} ноч. · {guests} гост.
+                                        {checkIn} — {checkOut} · {nights} ноч. · {effectiveGuests} спальных мест
                                     </p>
                                 )}
                             </div>
@@ -389,7 +447,7 @@ export default function HotelPage({
                             )}
                         </div>
 
-                        {/* ── Корзина бронирования ──────────────────────────── */}
+                        {/*  Корзина бронирования  */}
                         <div className="lg:w-80 shrink-0">
                             <div className="bg-white rounded-xl border shadow-sm p-6 sticky top-24">
                                 <h3 className="font-bold text-xl mb-4">Бронирование</h3>
@@ -398,7 +456,7 @@ export default function HotelPage({
                                     <>
                                         <div className="bg-blue-50 rounded-lg p-4 mb-4">
                                             <p className="font-bold text-blue-700">{bookingState.roomTypeName}</p>
-                                            <p className="text-sm text-gray-600 mt-1">🛏 {bookingState.rooms} ном · 👤 {bookingState.guests} гост.</p>
+                                            <p className="text-sm text-gray-600 mt-1">🛏 {bookingState.rooms} ном · 👤 {bookingState.guests} спальных мест</p>
                                             {checkIn && checkOut && (
                                                 <>
                                                     <p className="text-sm text-gray-600">📅 {checkIn} — {checkOut}</p>

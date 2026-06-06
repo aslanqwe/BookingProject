@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import AvailabilityBadge from './AvailabilityBadge';
 import type { Hotel } from '../types';
 
@@ -10,7 +10,6 @@ interface HotelCardProps {
 }
 
 export default function HotelCard({ hotel: h, checkIn, checkOut, guests }: HotelCardProps) {
-    const navigate = useNavigate();
 
     return (
         <div className="bg-white rounded-lg border shadow-sm hover:shadow-md transition-shadow flex flex-col sm:flex-row overflow-hidden">
@@ -57,12 +56,12 @@ export default function HotelCard({ hotel: h, checkIn, checkOut, guests }: Hotel
                         <p className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">
                             {h.totalRooms > 0 ? `от ${h.pricePerNight.toLocaleString()} ₸` : 'Цены уточняются'}
                         </p>
-                        <button
-                            onClick={() => navigate(`/hotels/${h.id}`)}
+                        <Link
+                            to={(`/hotels/${h.id}`)}
                             className="bg-[#0071c2] hover:bg-[#005999] text-white text-sm font-bold px-5 py-2 rounded transition w-full sm:w-auto"
                         >
                             Смотреть
-                        </button>
+                        </Link>
                     </div>
                 </div>
             </div>

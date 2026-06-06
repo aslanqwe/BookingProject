@@ -49,8 +49,15 @@ export default function HomePage() {
     const [searchCity, setSearchCity] = useState('');
     const [checkIn, setCheckIn] = useState('');
     const [checkOut, setCheckOut] = useState('');
-    const [guests, setGuests] = useState(2);
+
+    // Раздельные стейты для взрослых, детей (массив возрастов) и номеров
+    const [adults, setAdults] = useState(2);
+    const [childAges, setChildAges] = useState<number[]>([]);
     const [rooms, setRooms] = useState(1);
+
+    // Вычисляем количество гостей для бэкенда (Взрослые + Дети старше 2 лет)
+    const effectiveGuests = adults + childAges.filter(age => age > 2).length;
+
     const [maxPrice, setMaxPrice] = useState(500000);
     const [filterStars, setFilterStars] = useState(0);
     const [sortBy, setSortBy] = useState('');
@@ -85,14 +92,14 @@ export default function HomePage() {
                 : undefined,
             checkIn: checkIn || undefined,
             checkOut: checkOut || undefined,
-            guests,
+            guests: (overrides.guests ?? effectiveGuests) as number, // Передаем отфильтрованное число
             rooms,
             page: (overrides.page ?? 1) as number,
             pageSize: PAGE_SIZE,
             sortBy: ((overrides.sortBy ?? sortBy) as string) || undefined,
             propertyType: ((overrides.propertyType ?? filterPropertyType) as string) || undefined,
         });
-    }, [searchCity, maxPrice, filterStars, checkIn, checkOut, guests, rooms, sortBy, filterPropertyType, fetchHotels]);
+    }, [searchCity, maxPrice, filterStars, checkIn, checkOut, effectiveGuests, rooms, sortBy, filterPropertyType, fetchHotels]);
 
     // Первая загрузка 
     useEffect(() => {
@@ -107,7 +114,8 @@ export default function HomePage() {
         setFilterStars(0);
         setCheckIn('');
         setCheckOut('');
-        setGuests(2);
+        setAdults(2);
+        setChildAges([]);
         setRooms(1);
         setSortBy('');
         setFilterPropertyType('');
@@ -132,7 +140,10 @@ export default function HomePage() {
                 stars: filterStars > 0 ? filterStars : undefined,
                 checkIn: checkIn || undefined,
                 checkOut: checkOut || undefined,
-                guests, rooms, page: 1, pageSize: PAGE_SIZE,
+                guests: effectiveGuests, // Используем актуальное значение
+                rooms,
+                page: 1,
+                pageSize: PAGE_SIZE,
                 sortBy: sortBy || undefined,
                 propertyType: filterPropertyType || undefined,
             });
@@ -219,7 +230,7 @@ export default function HomePage() {
                                     <div>
                                         <p className="text-xs text-gray-400">Гости</p>
                                         <p className="text-sm text-gray-700 font-semibold whitespace-nowrap">
-                                            {guests} взр · {getRoomsText(rooms)}
+                                            {adults} взр · {childAges.length} дет · {getRoomsText(rooms)}
                                         </p>
                                     </div>
 
@@ -228,26 +239,84 @@ export default function HomePage() {
                                             className="absolute top-full left-0 mt-1 w-72 bg-white rounded-lg shadow-xl border p-5 z-50"
                                             onClick={e => e.stopPropagation()}
                                         >
-                                            {[
-                                                {label: 'Взрослые', value: guests, min: 1, set: setGuests},
-                                                {label: 'Номера', value: rooms, min: 1, set: setRooms},
-                                            ].map(({label, value, min, set}) => (
-                                                <div key={label}
-                                                     className="flex justify-between items-center mb-5 last:mb-0">
-                                                    <p className="font-bold text-gray-800">{label}</p>
-                                                    <div className="flex items-center gap-3">
-                                                        <button onClick={() => set(v => Math.max(min, v - 1))}
-                                                                disabled={value <= min}
-                                                                className="w-9 h-9 rounded border border-[#0071c2] text-[#0071c2] font-bold text-xl flex items-center justify-center hover:bg-blue-50 disabled:opacity-30 transition">−
-                                                        </button>
-                                                        <span className="font-semibold w-5 text-center">{value}</span>
-                                                        <button onClick={() => set(v => v + 1)}
-                                                                className="w-9 h-9 rounded border border-[#0071c2] text-[#0071c2] font-bold text-xl flex items-center justify-center hover:bg-blue-50 transition">+
-                                                        </button>
+                                            {/* Строка: Взрослые */}
+                                            <div className="flex justify-between items-center mb-5">
+                                                <p className="font-bold text-gray-800">Взрослые</p>
+                                                <div className="flex items-center gap-3">
+                                                    <button onClick={() => setAdults(v => Math.max(1, v - 1))}
+                                                            disabled={adults <= 1}
+                                                            className="w-9 h-9 rounded border border-[#0071c2] text-[#0071c2] font-bold text-xl flex items-center justify-center hover:bg-blue-50 disabled:opacity-30 transition">−
+                                                    </button>
+                                                    <span className="font-semibold w-5 text-center">{adults}</span>
+                                                    <button onClick={() => setAdults(v => v + 1)}
+                                                            className="w-9 h-9 rounded border border-[#0071c2] text-[#0071c2] font-bold text-xl flex items-center justify-center hover:bg-blue-50 transition">+
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            {/* Строка: Дети */}
+                                            <div className="flex justify-between items-center mb-5">
+                                                <p className="font-bold text-gray-800">Дети</p>
+                                                <div className="flex items-center gap-3">
+                                                    <button onClick={() => setChildAges(prev => prev.slice(0, -1))}
+                                                            disabled={childAges.length <= 0}
+                                                            className="w-9 h-9 rounded border border-[#0071c2] text-[#0071c2] font-bold text-xl flex items-center justify-center hover:bg-blue-50 disabled:opacity-30 transition">−
+                                                    </button>
+                                                    <span className="font-semibold w-5 text-center">{childAges.length}</span>
+                                                    <button onClick={() => setChildAges(prev => [...prev, 0])}
+                                                            className="w-9 h-9 rounded border border-[#0071c2] text-[#0071c2] font-bold text-xl flex items-center justify-center hover:bg-blue-50 transition">+
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            {/* Строка: Номера */}
+                                            <div className="flex justify-between items-center mb-5">
+                                                <p className="font-bold text-gray-800">Номера</p>
+                                                <div className="flex items-center gap-3">
+                                                    <button onClick={() => setRooms(v => Math.max(1, v - 1))}
+                                                            disabled={rooms <= 1}
+                                                            className="w-9 h-9 rounded border border-[#0071c2] text-[#0071c2] font-bold text-xl flex items-center justify-center hover:bg-blue-50 disabled:opacity-30 transition">−
+                                                    </button>
+                                                    <span className="font-semibold w-5 text-center">{rooms}</span>
+                                                    <button onClick={() => setRooms(v => v + 1)}
+                                                            className="w-9 h-9 rounded border border-[#0071c2] text-[#0071c2] font-bold text-xl flex items-center justify-center hover:bg-blue-50 transition">+
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            {/* Динамический блок выбора возраста */}
+                                            {childAges.length > 0 && (
+                                                <div className="mt-4 pt-4 border-t border-gray-100 max-h-40 overflow-y-auto">
+                                                    <p className="text-xs font-semibold text-gray-500 mb-2">Укажите возраст детей:</p>
+                                                    <div className="grid grid-cols-2 gap-2">
+                                                        {childAges.map((age, index) => (
+                                                            <div key={index} className="flex flex-col gap-1">
+                                                                <label className="text-[10px] text-gray-400">Ребенок {index + 1}</label>
+                                                                <select
+                                                                    value={age}
+                                                                    onChange={e => {
+                                                                        const newAge = Number(e.target.value);
+                                                                        setChildAges(prev => {
+                                                                            const updated = [...prev];
+                                                                            updated[index] = newAge;
+                                                                            return updated;
+                                                                        });
+                                                                    }}
+                                                                    className="text-xs border rounded p-1.5 outline-none bg-gray-50 font-medium focus:border-blue-500"
+                                                                >
+                                                                    {Array.from({ length: 18 }, (_, i) => (
+                                                                        <option key={i} value={i}>
+                                                                            {i === 0 ? 'Меньше года' : `${i} ${i === 1 ? 'год' : i < 5 ? 'года' : 'лет'}`}
+                                                                        </option>
+                                                                    ))}
+                                                                </select>
+                                                            </div>
+                                                        ))}
                                                     </div>
                                                 </div>
-                                            ))}
-                                            <button onClick={() => setIsGuestMenuOpen(false)}
+                                            )}
+
+                                            <button onClick={() => { setIsGuestMenuOpen(false); search(); }}
                                                     className="w-full mt-4 border border-[#0071c2] text-[#0071c2] font-bold py-2 rounded hover:bg-blue-50 transition">Готово
                                             </button>
                                         </div>
@@ -326,7 +395,7 @@ export default function HomePage() {
 
                 <div className="flex flex-col lg:flex-row gap-6">
 
-                    {/* ── ФИЛЬТРЫ (drawer на мобиле, sidebar на ПК) ─────────── */}
+                    {/*  ФИЛЬТРЫ  */}
                     <aside className={`
                         lg:w-64 lg:shrink-0 lg:static lg:z-auto
                         fixed bottom-0 left-0 right-0 z-50 max-h-[85vh] overflow-y-auto
@@ -434,7 +503,7 @@ export default function HomePage() {
                             <div className="flex flex-col gap-4">
                                 {hotels.map((h: Hotel) => (
                                     <HotelCard key={h.id} hotel={h} checkIn={checkIn} checkOut={checkOut}
-                                               guests={guests}/>
+                                               guests={effectiveGuests}/> // Передаем верное количество гостей в карточку
                                 ))}
                             </div>
                         )}
