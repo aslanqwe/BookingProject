@@ -105,9 +105,6 @@ namespace Booking.Migrations
                     b.Property<string>("HotelAmenities")
                         .HasColumnType("text");
 
-                    b.Property<string>("ImageUrl")
-                        .HasColumnType("text");
-
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean");
 
@@ -131,6 +128,28 @@ namespace Booking.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Hotels");
+                });
+
+            modelBuilder.Entity("Booking.Models.HotelImage", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("HotelId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ImageUrl")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("HotelId");
+
+                    b.ToTable("HotelImage");
                 });
 
             modelBuilder.Entity("Booking.Models.RoomType", b =>
@@ -386,6 +405,17 @@ namespace Booking.Migrations
                     b.Navigation("RoomType");
                 });
 
+            modelBuilder.Entity("Booking.Models.HotelImage", b =>
+                {
+                    b.HasOne("Booking.Models.Hotel", "Hotel")
+                        .WithMany("Images")
+                        .HasForeignKey("HotelId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Hotel");
+                });
+
             modelBuilder.Entity("Booking.Models.RoomType", b =>
                 {
                     b.HasOne("Booking.Models.Hotel", "Hotel")
@@ -450,6 +480,8 @@ namespace Booking.Migrations
 
             modelBuilder.Entity("Booking.Models.Hotel", b =>
                 {
+                    b.Navigation("Images");
+
                     b.Navigation("RoomTypes");
                 });
 #pragma warning restore 612, 618

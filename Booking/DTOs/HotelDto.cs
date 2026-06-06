@@ -10,7 +10,7 @@ public class HotelDto
     public decimal PricePerNight { get; set; }
     public int Stars { get; set; } = 3;
     public int TotalRooms { get; set; }
-    public string? ImageUrl { get; set; }
+    public List<string> Images { get; set; } = new();
     public string PropertyType { get; set; } = "Отель";
     public string? HotelAmenities { get; set; }
     public List<RoomTypeDto> RoomTypes { get; set; } = new();

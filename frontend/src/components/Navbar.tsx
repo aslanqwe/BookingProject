@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { User } from '../types';
+import { Link } from 'react-router-dom';
 
 interface NavbarProps {
     user: User | null;
@@ -30,19 +31,19 @@ export default function Navbar({ user, onLogout }: NavbarProps) {
                     <div className="hidden md:flex items-center gap-3">
                         {!user ? (
                             <>
-                                <button onClick={() => go('/login')} className="text-sm font-medium px-4 py-2 rounded border border-white/40 hover:bg-white/10 transition">Войти</button>
-                                <button onClick={() => go('/register')} className="text-sm font-bold px-4 py-2 rounded bg-white text-[#003580] hover:bg-gray-100 transition">Зарегистрироваться</button>
+                                <Link to={'/login'} className="text-sm font-medium px-4 py-2 rounded border border-white/40 hover:bg-white/10 transition">Войти</Link>
+                                <Link to={'/register'} className="text-sm font-bold px-4 py-2 rounded bg-white text-[#003580] hover:bg-gray-100 transition">Зарегистрироваться</Link>
                             </>
                         ) : (
                             <>
                                 <span className="text-sm text-blue-200 hidden lg:block">
                                     {user.email} <strong className="text-white">({user.role})</strong>
                                 </span>
-                                <button onClick={() => go('/my-bookings')} className="text-sm font-medium px-4 py-2 rounded border border-white/40 hover:bg-white/10 transition">Мои брони</button>
+                                <Link to={'/my-bookings'} className="text-sm font-medium px-4 py-2 rounded border border-white/40 hover:bg-white/10 transition">Мои брони</Link>
                                 {user.role === 'Owner' && (
                                     <>
-                                        <button onClick={() => go('/owner-dashboard')} className="text-sm font-medium px-4 py-2 rounded border border-white/40 hover:bg-white/10 transition">Мои отели</button>
-                                        <button onClick={() => go('/add-hotel')} className="text-sm font-bold px-4 py-2 rounded bg-green-500 hover:bg-green-600 transition">+ Добавить</button>
+                                        <Link to={'/owner-dashboard'} className="text-sm font-medium px-4 py-2 rounded border border-white/40 hover:bg-white/10 transition">Мои отели</Link>
+                                        <Link to={'/add-hotel'} className="text-sm font-bold px-4 py-2 rounded bg-green-500 hover:bg-green-600 transition">+ Добавить</Link>
                                     </>
                                 )}
                                 <button onClick={() => { onLogout(); setMenuOpen(false); }} className="text-sm px-4 py-2 rounded border border-white/40 hover:bg-white/10 transition">Выйти</button>

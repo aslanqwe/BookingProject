@@ -118,6 +118,7 @@ public class HotelsController : ControllerBase
         var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
         var hotels = await context.Hotels
             .Include(h => h.RoomTypes)
+            .Include(h => h.Images)
             .Where(h => h.OwnerId == userId && !h.IsDeleted)
             .ToListAsync();
 
@@ -130,7 +131,11 @@ public class HotelsController : ControllerBase
             Description = h.Description,
             PricePerNight = h.PricePerNight,
             Stars = h.Stars,
-            ImageUrl = h.ImageUrl,
+            
+            Images = h.Images
+                .Select(i => i.ImageUrl)
+                .ToList(),
+            
             PropertyType = h.PropertyType,
             HotelAmenities = h.HotelAmenities,
             TotalRooms = h.RoomTypes.Sum(rt => rt.TotalRooms)

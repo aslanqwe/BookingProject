@@ -18,6 +18,7 @@ public class HotelService : IHotelService
     {
         var h = await _context.Hotels
             .Include(h => h.RoomTypes)
+            .Include(h => h.Images)
             .FirstOrDefaultAsync(h => h.Id == id && !h.IsDeleted);
         return h == null ? null : MapToDto(h);
     }
@@ -29,6 +30,7 @@ public class HotelService : IHotelService
     {
         var query = _context.Hotels
             .Include(h => h.RoomTypes)
+            .Include(h => h.Images)
             .Where(h => !h.IsDeleted)
             .AsQueryable();
 
@@ -102,10 +104,14 @@ public class HotelService : IHotelService
             Description = dto.Description,
             PricePerNight = dto.PricePerNight,
             Stars = dto.Stars,
-            ImageUrl = dto.ImageUrl,
             PropertyType = dto.PropertyType,
             HotelAmenities = dto.HotelAmenities,
-            OwnerId = ownerId
+            OwnerId = ownerId,
+            
+            Images = dto.Images.Select(url => new HotelImage
+            {
+            ImageUrl = url
+        }).ToList()
         };
 
         _context.Hotels.Add(hotel);
@@ -120,6 +126,7 @@ public class HotelService : IHotelService
     {
         var hotel = await _context.Hotels
             .Include(h => h.RoomTypes)
+            .Include(h => h.Images)
             .FirstOrDefaultAsync(h => h.Id == id);
 
         if (hotel == null || hotel.OwnerId != ownerId) return null;
@@ -132,8 +139,15 @@ public class HotelService : IHotelService
         hotel.Stars = dto.Stars;
         hotel.PropertyType = dto.PropertyType;
         hotel.HotelAmenities = dto.HotelAmenities;
-        if (!string.IsNullOrEmpty(dto.ImageUrl))
-            hotel.ImageUrl = dto.ImageUrl;
+        hotel.Images.Clear();
+
+        foreach (var imageUrl in dto.Images)
+        {
+            hotel.Images.Add(new HotelImage
+            {
+                ImageUrl = imageUrl
+            });
+        }
 
         await _context.SaveChangesAsync();
         return MapToDto(hotel);
@@ -150,7 +164,9 @@ public class HotelService : IHotelService
             ? h.RoomTypes.Min(rt => rt.PricePerNight) 
             : h.PricePerNight,
         Stars = h.Stars,
-        ImageUrl = h.ImageUrl,
+        Images = h.Images
+            .Select(i => i.ImageUrl)
+            .ToList(),
         PropertyType = h.PropertyType,
         HotelAmenities = h.HotelAmenities,
         TotalRooms = h.RoomTypes?.Sum(rt => rt.TotalRooms) ?? 0

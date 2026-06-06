@@ -1,18 +1,17 @@
-﻿import { useState } from 'react';
-import { hotelsApi } from '../api/hotels';
+﻿import { useHotelForm } from '../hooks/useHotelForm';
 import AmenitiesSelector from '../components/AmenitiesSelector';
 
-interface AddHotelProps {
+interface AddHotelPageProps {
     onSuccess: () => void;
     ownerEmail: string;
 }
 
 const PROPERTY_TYPES = [
-    { value: 'Отель',       label: '🏨 Отель',       desc: 'Гостиница с номерным фондом' },
-    { value: 'Апартаменты', label: '🏢 Апартаменты', desc: 'Квартира посуточно' },
-    { value: 'Хостел',      label: '🛏 Хостел',      desc: 'Бюджетное размещение' },
-    { value: 'Гостевой дом',label: '🏠 Гостевой дом',desc: 'Частный дом для гостей' },
-    { value: 'Вилла',       label: '🌴 Вилла',       desc: 'Отдельная вилла или коттедж' },
+    { value: 'Отель',        label: '🏨 Отель',        desc: 'Гостиница с номерным фондом' },
+    { value: 'Апартаменты',  label: '🏢 Апартаменты',  desc: 'Квартира посуточно' },
+    { value: 'Хостел',       label: '🛏 Хостел',       desc: 'Бюджетное размещение' },
+    { value: 'Гостевой дом', label: '🏠 Гостевой дом', desc: 'Частный дом для гостей' },
+    { value: 'Вилла',        label: '🌴 Вилла',        desc: 'Отдельная вилла или коттедж' },
 ];
 
 const HOTEL_AMENITIES = [
@@ -21,68 +20,23 @@ const HOTEL_AMENITIES = [
     'Завтрак включён', 'Кондиционер', 'Лифт', 'Круглосуточная стойка регистрации',
 ];
 
-interface FormData {
-    name: string; city: string; address: string; description: string;
-    stars: number; imageUrl: string; propertyType: string; hotelAmenities: string;
-}
+export default function AddHotelPage({ onSuccess }: AddHotelPageProps) {
+    const {
+        formData, previews, uploading, submitting, step,
+        setField, uploadImages, removeImage, submit, selectType, goBack,
+        MAX_IMAGES,
+    } = useHotelForm(onSuccess);
 
-const EMPTY_FORM: FormData = {
-    name: '', city: '', address: '', description: '',
-    stars: 3, imageUrl: '', propertyType: '', hotelAmenities: '',
-};
-
-export default function AddHotelPage({ onSuccess }: AddHotelProps) {
-    const [step, setStep] = useState<'type' | 'details'>('type');
-    const [formData, setFormData] = useState<FormData>(EMPTY_FORM);
-    const [imagePreview, setImagePreview] = useState<string | null>(null);
-    const [uploading, setUploading] = useState(false);
-    const [submitting, setSubmitting] = useState(false);
-
-    const set = (field: keyof FormData, value: string | number) =>
-        setFormData(prev => ({ ...prev, [field]: value }));
-
-    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-        setUploading(true);
-        try {
-            const data = await hotelsApi.uploadImage(file);
-            set('imageUrl', data.imageUrl);
-            setImagePreview(URL.createObjectURL(file));
-        } catch (err: unknown) {
-            const msg = err instanceof Error ? err.message : 'Ошибка загрузки фото';
-            alert(msg);
-        } finally {
-            setUploading(false);
-        }
-    };
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setSubmitting(true);
-        try {
-            await hotelsApi.createHotel(formData);
-            alert('Объект успешно добавлен!');
-            onSuccess();
-        } catch (err: unknown) {
-            const msg = err instanceof Error ? err.message : 'Не удалось добавить объект';
-            alert(msg);
-        } finally {
-            setSubmitting(false);
-        }
-    };
-
-    // ШАГ 1 — выбор типа объекта
     if (step === 'type') {
         return (
-            <div className="max-w-2xl mx-auto">
+            <div className="max-w-2xl mx-auto px-4 py-8">
                 <h2 className="text-2xl font-bold text-gray-800 mb-2">Добавить объект размещения</h2>
                 <p className="text-gray-500 mb-8">Что вы хотите разместить?</p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {PROPERTY_TYPES.map(type => (
                         <button
                             key={type.value}
-                            onClick={() => { set('propertyType', type.value); setStep('details'); }}
+                            onClick={() => selectType(type.value)}
                             className="bg-white border-2 border-gray-200 hover:border-blue-500 hover:bg-blue-50 rounded-xl p-6 text-left transition group"
                         >
                             <div className="text-3xl mb-3">{type.label.split(' ')[0]}</div>
@@ -97,111 +51,126 @@ export default function AddHotelPage({ onSuccess }: AddHotelProps) {
         );
     }
 
-    // ШАГ 2 — заполнение деталей
-    return (
-        <div className="max-w-lg mx-auto bg-white p-6 rounded-xl shadow-md border">
-            <div className="flex items-center gap-3 mb-6">
-                <button onClick={() => setStep('type')} className="text-blue-600 hover:text-blue-800 text-sm">← Назад</button>
-                <div>
-                    <h2 className="text-xl font-bold text-gray-800">
-                        {PROPERTY_TYPES.find(t => t.value === formData.propertyType)?.label}
-                    </h2>
-                    <p className="text-xs text-gray-500">Заполните информацию об объекте</p>
-                </div>
-            </div>
+    const currentType = PROPERTY_TYPES.find(t => t.value === formData.propertyType);
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-                {/* Фото */}
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Фото объекта</label>
-                    <div className="border-2 border-dashed border-gray-300 rounded-xl overflow-hidden">
-                        {imagePreview ? (
-                            <div className="relative">
-                                <img src={imagePreview} alt="preview" className="w-full h-48 object-cover" />
-                                <button type="button"
-                                        onClick={() => { setImagePreview(null); set('imageUrl', ''); }}
-                                        className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-7 h-7 flex items-center justify-center hover:bg-red-600">✕
-                                </button>
+    return (
+        <div className="max-w-lg mx-auto px-4 py-8">
+            <div className="bg-white rounded-xl shadow-md border p-6">
+                <div className="flex items-center gap-3 mb-6">
+                    <button onClick={goBack} className="text-blue-600 hover:text-blue-800 text-sm">← Назад</button>
+                    <div>
+                        <h2 className="text-xl font-bold text-gray-800">{currentType?.label}</h2>
+                        <p className="text-xs text-gray-500">Заполните информацию об объекте</p>
+                    </div>
+                </div>
+
+                <form onSubmit={submit} className="space-y-5">
+                    {/* Фотографии */}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Фото объекта
+                            <span className="text-gray-400 font-normal ml-1">({previews.length}/{MAX_IMAGES})</span>
+                        </label>
+                        {previews.length > 0 && (
+                            <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 mb-3">
+                                {previews.map((src, i) => (
+                                    <div key={i} className="relative group aspect-square rounded-lg overflow-hidden border bg-gray-100">
+                                        <img src={src} alt="" className="w-full h-full object-cover" />
+                                        <button
+                                            type="button"
+                                            onClick={() => removeImage(i)}
+                                            className="absolute top-1 right-1 w-5 h-5 bg-red-500 text-white rounded-full text-[10px] flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
+                                        >✕</button>
+                                        {i === 0 && (
+                                            <span className="absolute bottom-1 left-1 text-[9px] bg-black/60 text-white px-1.5 py-0.5 rounded">Главное</span>
+                                        )}
+                                    </div>
+                                ))}
                             </div>
-                        ) : (
-                            <label className="flex flex-col items-center justify-center h-48 cursor-pointer hover:bg-gray-50 transition">
+                        )}
+                        {previews.length < MAX_IMAGES && (
+                            <label className={`flex items-center gap-3 border-2 border-dashed border-gray-300 rounded-xl p-4 cursor-pointer hover:bg-gray-50 transition ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
                                 {uploading
-                                    ? <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
-                                    : (<><span className="text-4xl mb-2">📷</span><span className="text-sm text-gray-500">Нажмите чтобы загрузить фото</span><span className="text-xs text-gray-400 mt-1">JPG, PNG, WEBP до 5MB</span></>)
+                                    ? <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                                    : <span className="text-2xl">📷</span>
                                 }
-                                <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+                                <div>
+                                    <p className="text-sm font-medium text-gray-700">{uploading ? 'Загружаем...' : 'Добавить фото'}</p>
+                                    <p className="text-xs text-gray-400">JPG, PNG, WEBP · до 5MB каждое</p>
+                                </div>
+                                <input type="file" accept="image/*" multiple className="hidden" onChange={uploadImages} disabled={uploading} />
                             </label>
                         )}
                     </div>
-                </div>
 
-                {/* Название */}
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Название {formData.propertyType === 'Апартаменты' ? 'квартиры' : 'объекта'}
-                    </label>
-                    <input type="text"
-                           placeholder={formData.propertyType === 'Апартаменты' ? 'Например: Уютная 2-комнатная квартира' : 'Название'}
-                           className="w-full border rounded-lg p-2.5 text-sm outline-none focus:border-blue-500"
-                           value={formData.name} onChange={e => set('name', e.target.value)} required />
-                </div>
-
-                {/* Город + Адрес */}
-                <div className="grid grid-cols-2 gap-3">
+                    {/* Название */}
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Город</label>
-                        <input type="text" className="w-full border rounded-lg p-2.5 text-sm outline-none focus:border-blue-500"
-                               value={formData.city} onChange={e => set('city', e.target.value)} required />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Адрес</label>
-                        <input type="text" placeholder="ул. Байтурсынова, 15"
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Название {formData.propertyType === 'Апартаменты' ? 'квартиры' : 'объекта'}
+                        </label>
+                        <input type="text"
+                               placeholder={formData.propertyType === 'Апартаменты' ? 'Уютная 2-комнатная квартира' : 'Название'}
                                className="w-full border rounded-lg p-2.5 text-sm outline-none focus:border-blue-500"
-                               value={formData.address} onChange={e => set('address', e.target.value)} />
+                               value={formData.name} onChange={e => setField('name', e.target.value)} required />
                     </div>
-                </div>
 
-                {/* Описание */}
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Описание</label>
-                    <textarea className="w-full border rounded-lg p-2.5 text-sm outline-none focus:border-blue-500 h-24 resize-none"
-                              placeholder="Расскажите об объекте..."
-                              value={formData.description} onChange={e => set('description', e.target.value)} required />
-                </div>
-
-                {/* Звёзды */}
-                {formData.propertyType !== 'Апартаменты' && (
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Категория</label>
-                        <div className="flex gap-2">
-                            {[1, 2, 3, 4, 5].map(star => (
-                                <button key={star} type="button" onClick={() => set('stars', star)}
-                                        className={`text-2xl transition ${star <= formData.stars ? 'text-yellow-400' : 'text-gray-300'}`}>★</button>
-                            ))}
-                            <span className="text-sm text-gray-500 self-center ml-2">{formData.stars} звезды</span>
+                    {/* Город + Адрес */}
+                    <div className="grid grid-cols-2 gap-3">
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Город</label>
+                            <input type="text" className="w-full border rounded-lg p-2.5 text-sm outline-none focus:border-blue-500"
+                                   value={formData.city} onChange={e => setField('city', e.target.value)} required />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Адрес</label>
+                            <input type="text" placeholder="ул. Байтурсынова, 15"
+                                   className="w-full border rounded-lg p-2.5 text-sm outline-none focus:border-blue-500"
+                                   value={formData.address} onChange={e => setField('address', e.target.value)} />
                         </div>
                     </div>
-                )}
 
-                <div className="bg-blue-50 rounded-lg p-3 text-sm text-gray-600">
-                    <p>💡 После создания объекта вы сможете добавить типы номеров в панели владельца</p>
-                </div>
+                    {/* Описание */}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Описание</label>
+                        <textarea className="w-full border rounded-lg p-2.5 text-sm outline-none focus:border-blue-500 h-24 resize-none"
+                                  placeholder="Расскажите об объекте..."
+                                  value={formData.description} onChange={e => setField('description', e.target.value)} required />
+                    </div>
 
-                {/* Удобства */}
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Удобства</label>
-                    <AmenitiesSelector
-                        options={HOTEL_AMENITIES}
-                        selectedAmenities={formData.hotelAmenities}
-                        onChange={val => set('hotelAmenities', val)}
-                    />
-                </div>
+                    {/* Звёзды */}
+                    {formData.propertyType !== 'Апартаменты' && (
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Категория</label>
+                            <div className="flex gap-2 items-center">
+                                {[1, 2, 3, 4, 5].map(star => (
+                                    <button key={star} type="button" onClick={() => setField('stars', star)}
+                                            className={`text-2xl transition ${star <= formData.stars ? 'text-yellow-400' : 'text-gray-300'}`}>★</button>
+                                ))}
+                                <span className="text-sm text-gray-500 ml-2">{formData.stars} звезды</span>
+                            </div>
+                        </div>
+                    )}
 
-                <button type="submit" disabled={uploading || submitting}
-                        className="w-full bg-green-600 text-white py-3 rounded-lg font-bold hover:bg-green-700 transition disabled:opacity-50">
-                    {submitting ? 'Публикуем...' : 'Опубликовать объект'}
-                </button>
-            </form>
+                    <div className="bg-blue-50 rounded-lg p-3 text-sm text-gray-600">
+                        💡 После создания объекта вы сможете добавить типы номеров в панели владельца
+                    </div>
+
+                    {/* Удобства */}
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Удобства</label>
+                        <AmenitiesSelector
+                            options={HOTEL_AMENITIES}
+                            selectedAmenities={formData.hotelAmenities}
+                            onChange={val => setField('hotelAmenities', val)}
+                        />
+                    </div>
+
+                    <button type="submit" disabled={uploading || submitting}
+                            className="w-full bg-green-600 text-white py-3 rounded-lg font-bold hover:bg-green-700 transition disabled:opacity-50">
+                        {submitting ? 'Публикуем...' : 'Опубликовать объект'}
+                    </button>
+                </form>
+            </div>
         </div>
     );
 }

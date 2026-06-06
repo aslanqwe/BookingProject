@@ -9,7 +9,8 @@ public class Hotel
     public decimal PricePerNight { get; set; }
     public string? OwnerId { get; set; }
     public int Stars { get; set; } = 3;
-    public string? ImageUrl { get; set; }
+    public ICollection<HotelImage> Images { get; set; }
+        = new List<HotelImage>();
     public string PropertyType { get; set; } = "Отель"; // Отель, Апартаменты, Хостел, Гостевой дом
     public string? Address { get; set; }
     public string? HotelAmenities { get; set; }

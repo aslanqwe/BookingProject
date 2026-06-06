@@ -10,12 +10,22 @@ interface HotelCardProps {
 }
 
 export default function HotelCard({ hotel: h, checkIn, checkOut, guests }: HotelCardProps) {
+    // Достаем картинки из бэкенда (учитывая старый и новый формат типов)
+    const rawUrl = h.imageUrl || (h.images && h.images.length > 0 ? h.images.join(',') : '');
+
+    // Разбиваем по запятой и фильтруем пустые
+    const imgArray = rawUrl
+        ? rawUrl.split(',').map(u => u.trim()).filter(Boolean)
+        : [];
+
+    // Берем последнюю картинку (с конца массива)
+    const coverImage = imgArray.length > 0 ? imgArray[imgArray.length - 1] : null;
 
     return (
         <div className="bg-white rounded-lg border shadow-sm hover:shadow-md transition-shadow flex flex-col sm:flex-row overflow-hidden">
             <div className="w-full h-48 sm:w-48 sm:h-auto shrink-0 bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center overflow-hidden">
-                {h.imageUrl ? (
-                    <img src={h.imageUrl} alt={h.name} className="w-full h-full object-cover" />
+                {coverImage ? (
+                    <img src={coverImage} alt={h.name} className="w-full h-full object-cover" />
                 ) : (
                     <span className="text-blue-300 font-bold text-lg text-center px-2">{h.name}</span>
                 )}
@@ -57,8 +67,8 @@ export default function HotelCard({ hotel: h, checkIn, checkOut, guests }: Hotel
                             {h.totalRooms > 0 ? `от ${h.pricePerNight.toLocaleString()} ₸` : 'Цены уточняются'}
                         </p>
                         <Link
-                            to={(`/hotels/${h.id}`)}
-                            className="bg-[#0071c2] hover:bg-[#005999] text-white text-sm font-bold px-5 py-2 rounded transition w-full sm:w-auto"
+                            to={`/hotels/${h.id}`}
+                            className="inline-block text-center bg-[#0071c2] hover:bg-[#005999] text-white text-sm font-bold px-5 py-2 rounded transition w-full sm:w-auto"
                         >
                             Смотреть
                         </Link>

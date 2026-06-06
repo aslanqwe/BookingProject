@@ -18,19 +18,19 @@ const HOTEL_AMENITIES = [
 
 interface FormData {
     name: string; city: string; address: string; description: string;
-    pricePerNight: number; stars: number; imageUrl: string;
-    propertyType: string; hotelAmenities: string;
+    pricePerNight: number; stars: number; propertyType: string; hotelAmenities: string;
 }
 
 const EMPTY_FORM: FormData = {
     name: '', city: '', address: '', description: '',
-    pricePerNight: 0, stars: 3, imageUrl: '',
-    propertyType: 'Отель', hotelAmenities: '',
+    pricePerNight: 0, stars: 3, propertyType: 'Отель', hotelAmenities: '',
 };
+
+const MAX_PHOTOS = 15;
 
 export default function EditHotelModal({ hotel, onClose, onSuccess }: EditHotelModalProps) {
     const [formData, setFormData] = useState<FormData>(EMPTY_FORM);
-    const [imagePreview, setImagePreview] = useState<string | null>(null);
+    const [photos, setPhotos] = useState<string[]>([]); // 🔥 Массив текущих фото
     const [uploading, setUploading] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -44,31 +44,46 @@ export default function EditHotelModal({ hotel, onClose, onSuccess }: EditHotelM
                 description: hotel.description ?? '',
                 pricePerNight: hotel.pricePerNight,
                 stars: hotel.stars,
-                imageUrl: hotel.imageUrl ?? '',
                 propertyType: hotel.propertyType ?? 'Отель',
                 hotelAmenities: hotel.hotelAmenities ?? '',
             });
-            setImagePreview(hotel.imageUrl ?? null);
+
+            // Вытаскиваем фотки из старого (строка) или нового (массив) типа
+            const rawUrl = hotel.imageUrl || (hotel.images ? hotel.images.join(',') : '');
+            setPhotos(rawUrl ? rawUrl.split(',').map(s => s.trim()).filter(Boolean) : []);
             setError('');
         }
-    }, [hotel?.id]);
+    }, [hotel]);
 
     if (!hotel) return null;
 
-    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
+    // Загрузка множества фото
+    const handleMultipleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files || []);
+        if (files.length === 0) return;
+
+        if (photos.length + files.length > MAX_PHOTOS) {
+            alert(`Максимум ${MAX_PHOTOS} фото.`);
+            return;
+        }
+
         setUploading(true);
         try {
-            const data = await hotelsApi.uploadImage(file);
-            setFormData(prev => ({ ...prev, imageUrl: data.imageUrl }));
-            setImagePreview(URL.createObjectURL(file));
+            const uploadPromises = files.map(file => hotelsApi.uploadImage(file));
+            const results = await Promise.all(uploadPromises);
+            const newUrls = results.map(res => res.imageUrl);
+            setPhotos(prev => [...prev, ...newUrls]);
         } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : 'Ошибка загрузки фото';
             alert(msg);
         } finally {
             setUploading(false);
+            e.target.value = ''; // сброс input
         }
+    };
+
+    const removePhoto = (indexToRemove: number) => {
+        setPhotos(prev => prev.filter((_, idx) => idx !== indexToRemove));
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -76,9 +91,14 @@ export default function EditHotelModal({ hotel, onClose, onSuccess }: EditHotelM
         setLoading(true);
         setError('');
         try {
-            await hotelsApi.updateHotel(hotel.id, formData);
+            // Отправляем данные + склеиваем фото обратно в строку для бэкенда
+            const payload = {
+                ...formData,
+                images: photos
+            };
+
+            await hotelsApi.updateHotel(hotel.id, payload as any);
             onSuccess();
-            onClose();
         } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : 'Ошибка при сохранении';
             setError(msg);
@@ -115,27 +135,43 @@ export default function EditHotelModal({ hotel, onClose, onSuccess }: EditHotelM
                             </select>
                         </div>
 
-                        {/* Фото */}
+                        {/* Галерея фотографий (Множественная загрузка) */}
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Фото</label>
-                            <div className="border-2 border-dashed border-gray-300 rounded-xl overflow-hidden">
-                                {imagePreview ? (
-                                    <div className="relative">
-                                        <img src={imagePreview} alt="preview" className="w-full h-48 object-cover" />
-                                        <button type="button" onClick={() => { setImagePreview(null); set('imageUrl', ''); }}
-                                                className="absolute top-2 right-2 bg-red-500 text-white rounded-full w-7 h-7 flex items-center justify-center hover:bg-red-600">✕
-                                        </button>
-                                    </div>
-                                ) : (
-                                    <label className="flex flex-col items-center justify-center h-48 cursor-pointer hover:bg-gray-50 transition">
-                                        {uploading
-                                            ? <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
-                                            : <><span className="text-4xl mb-2">📷</span><span className="text-sm text-gray-500">Загрузить фото</span></>
-                                        }
-                                        <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
-                                    </label>
-                                )}
+                            <div className="flex justify-between items-end mb-2">
+                                <label className="block text-sm font-medium text-gray-700">Фотографии объекта</label>
+                                <span className="text-xs text-gray-400">{photos.length} / {MAX_PHOTOS}</span>
                             </div>
+
+                            {photos.length > 0 && (
+                                <div className="grid grid-cols-3 gap-2 mb-3">
+                                    {photos.map((url, idx) => (
+                                        <div key={idx} className="relative aspect-square rounded-lg overflow-hidden border border-gray-200 group">
+                                            <img src={url} alt="" className="w-full h-full object-cover" />
+                                            {idx === photos.length - 1 && (
+                                                <span className="absolute bottom-1 left-1 bg-blue-600 text-white text-[9px] px-1.5 py-0.5 rounded font-bold">Главное</span>
+                                            )}
+                                            <button
+                                                type="button"
+                                                onClick={() => removePhoto(idx)}
+                                                className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600 shadow-md text-xs"
+                                            >
+                                                ✕
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {photos.length < MAX_PHOTOS && (
+                                <label className="flex items-center justify-center h-16 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:bg-gray-50 transition">
+                                    {uploading ? (
+                                        <div className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                                    ) : (
+                                        <span className="text-sm font-medium text-blue-600">+ Загрузить фото</span>
+                                    )}
+                                    <input type="file" multiple accept="image/*" className="hidden" onChange={handleMultipleImageUpload} disabled={uploading} />
+                                </label>
+                            )}
                         </div>
 
                         {/* Название */}

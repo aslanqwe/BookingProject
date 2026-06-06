@@ -14,7 +14,7 @@ export interface Hotel {
     description?: string;
     stars: number;
     totalRooms: number;
-    imageUrl?: string;
+    images: string[];
     propertyType: string;
     hotelAmenities?: string;
 }
