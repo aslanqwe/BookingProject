@@ -1,6 +1,6 @@
 import {useState, useCallback} from 'react';
 import {hotelsApi} from '../api/hotels';
-import {type Hotel} from '../components/HotelCard';
+import type { Hotel } from '../types';
 
 export interface HotelSearchParams {
     city?: string;

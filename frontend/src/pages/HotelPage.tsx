@@ -3,7 +3,7 @@ import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import {ru} from 'date-fns/locale/ru';
 import BookingCheckout from '../components/BookingCheckout';
-import RoomTypeRow, {AMENITY_ICONS} from '../components/RoomTypeRow';
+import RoomTypeRow from '../components/RoomTypeRow';
 import {useRoomTypes} from '../hooks/useRoomTypes';
 import type {Hotel, RoomType} from '../types';
 
@@ -84,10 +84,7 @@ export default function HotelPage({
     // Хук для типов номеров 
     const {roomTypes, loading: loadingRooms, fetchRoomTypes} = useRoomTypes(hotel.id);
 
-    const rawUrl = hotel.imageUrl || (hotel.images && hotel.images.length > 0 ? hotel.images.join(',') : '');
-    const imgArray = rawUrl
-        ? rawUrl.split(',').map(u => u.trim()).filter(Boolean)
-        : [];
+    const imgArray = hotel.images && hotel.images.length > 0 ? hotel.images : [];
 
     const [showGallery, setShowGallery] = useState(false);
 
@@ -176,7 +173,7 @@ export default function HotelPage({
     if (checkoutData) {
         return (
             <BookingCheckout
-                hotel={{id: hotel.id, name: hotel.name, city: hotel.city, address: hotel.address, images: hotel.images}}
+                hotel={{id: hotel.id, name: hotel.name, city: hotel.city, address: hotel.address, images: hotel.images || []} as any}
                 roomType={checkoutData.roomType}
                 checkIn={checkIn}
                 checkOut={checkOut}
@@ -254,14 +251,14 @@ export default function HotelPage({
 
                         {/* Правая колонка с двумя фото */}
                         <div className="hidden md:flex flex-col gap-2 h-full">
-                            {/* Первое дополнительное фото (вместо h-1/2 используем flex-1) */}
+                            {/* Первое дополнительное фото */}
                             <div className="flex-1 min-h-0 bg-gray-100 overflow-hidden rounded-tr-xl">
                                 <img
                                     src={images[images.length - 2] ?? images[0]}
                                     alt=""
                                     className="w-full h-full object-cover hover:opacity-90 transition-opacity"
                                 />
-                            </div>
+                            </div> 
 
                             {/* Второе дополнительное фото с кнопкой (flex-1) */}
                             <div

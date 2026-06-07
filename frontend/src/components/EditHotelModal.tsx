@@ -49,8 +49,8 @@ export default function EditHotelModal({ hotel, onClose, onSuccess }: EditHotelM
             });
 
             // Вытаскиваем фотки из старого (строка) или нового (массив) типа
-            const rawUrl = hotel.imageUrl || (hotel.images ? hotel.images.join(',') : '');
-            setPhotos(rawUrl ? rawUrl.split(',').map(s => s.trim()).filter(Boolean) : []);
+            const rawUrl = hotel.images && hotel.images.length > 0 ? hotel.images.join(',') : '';
+            setPhotos(rawUrl ? rawUrl.split(',').map((s: string) => s.trim()).filter(Boolean) : []);
             setError('');
         }
     }, [hotel]);

@@ -7,7 +7,7 @@ services:
     environment:
       POSTGRES_DB: booking_db
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: aslan
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
       - "5432:5432"
     volumes:
@@ -17,7 +17,14 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-
+  
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    command: tunnel --url http://frontend:80
+    restart: always
+    depends_on:
+      - frontend
+  
   backend:
     build:
       context: .

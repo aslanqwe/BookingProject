@@ -10,15 +10,7 @@ interface HotelCardProps {
 }
 
 export default function HotelCard({ hotel: h, checkIn, checkOut, guests }: HotelCardProps) {
-    // Достаем картинки из бэкенда (учитывая старый и новый формат типов)
-    const rawUrl = h.imageUrl || (h.images && h.images.length > 0 ? h.images.join(',') : '');
-
-    // Разбиваем по запятой и фильтруем пустые
-    const imgArray = rawUrl
-        ? rawUrl.split(',').map(u => u.trim()).filter(Boolean)
-        : [];
-
-    // Берем последнюю картинку (с конца массива)
+    const imgArray = h.images && h.images.length > 0 ? h.images : [];
     const coverImage = imgArray.length > 0 ? imgArray[imgArray.length - 1] : null;
 
     return (

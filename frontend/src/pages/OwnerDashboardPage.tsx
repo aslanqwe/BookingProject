@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import EditHotelModal from '../components/EditHotelModal';
 import ManageRoomTypes from '../components/ManageRoomTypes';
 import { useOwnerData } from '../hooks/useOwnerData';
+import type { Hotel } from '../types';
 
 interface Booking {
     id: number;
@@ -21,19 +22,6 @@ interface Booking {
     rooms?: number;
 }
 
-interface Hotel {
-    id: number;
-    name: string;
-    city: string;
-    pricePerNight: number;
-    description?: string;
-    stars: number;
-    totalRooms: number;
-    imageUrl?: string;
-    images?: string[];
-    propertyType: string;
-    hotelAmenities?: string;
-}
 
 export default function OwnerDashboard() {
     const { bookings, myHotels, loading, fetchData, deleteHotel } = useOwnerData();
@@ -97,8 +85,7 @@ export default function OwnerDashboard() {
             <h3 className="text-xl font-bold text-gray-800 mb-4">Мои отели</h3>
             <div className="flex flex-col gap-4 mb-8">
                 {myHotels.map(hotel => {
-                    const rawUrl = hotel.imageUrl || (hotel.images ? hotel.images.join(',') : '');
-                    const imgArray = rawUrl ? rawUrl.split(',').map(u => u.trim()).filter(Boolean) : [];
+                    const imgArray = hotel.images ? hotel.images : [];
                     const coverImage = imgArray.length > 0 ? imgArray[imgArray.length - 1] : null;
 
                     return (
@@ -148,10 +135,10 @@ export default function OwnerDashboard() {
                 </div>
             ) : (
                 <div className="flex flex-col gap-6">
-                    {Object.entries(groupedByHotel).map(([hotelName, hotelBookings]) => {
+                    {(Object.entries(groupedByHotel) as [string, Booking[]][]).map(([hotelName, hotelBookings]) => {
                         const hotelRevenue = hotelBookings
                             .filter(b => b.status === 'Active' || b.status === 'Completed')
-                            .reduce((sum, b) => sum + b.totalPrice, 0);
+                            .reduce((sum: number, b: Booking) => sum + b.totalPrice, 0);
 
                         return (
                             <div key={hotelName} className="bg-white rounded-xl border shadow-sm overflow-hidden">

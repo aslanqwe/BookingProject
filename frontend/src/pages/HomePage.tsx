@@ -2,7 +2,8 @@ import {useState, useEffect, useRef, useCallback} from 'react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import {ru} from 'date-fns/locale/ru';
-import HotelCard, {type Hotel} from '../components/HotelCard';
+import HotelCard from '../components/HotelCard';
+import type { Hotel } from '../types';
 import {useHotels} from '../hooks/useHotels';
 
 const PROPERTY_TYPE_TABS = [
